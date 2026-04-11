@@ -17,6 +17,8 @@
 #define PIN_GPS_RX  1
 
 
+
+//!Wtf dude
 /**
  * ESP32-C3 GPIO Mapping
  * Reference: Table 2-4 Pin Definitions
