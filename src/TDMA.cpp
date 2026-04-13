@@ -48,20 +48,21 @@ void TDMA_setup(uint8_t my_id) {
     Serial.print("Tids slots er:");
     Serial.print(t_slot / 1000);
     Serial.println("ms");
-    TDMA_mux = xSemaphoreCreateBinary();
-    hw_timer = timerBegin(0, 80, true);  //80Mhz div med 80 = 1Mhz = 1us
-    timerAttachInterrupt(hw_timer, &TimerAlarm, true);
-    timerAlarmWrite(hw_timer, t_slot, true); //used to set counter value of the timer.
+    //TDMA_mux = xSemaphoreCreateBinary();
+    //hw_timer = timerBegin(0, 80, true);  //80Mhz div med 80 = 1Mhz = 1us
+    //timerAttachInterrupt(hw_timer, &TimerAlarm, true);
+    //timerAlarmWrite(hw_timer, t_slot, true); //used to set counter value of the timer.
     //Freertos tasks.
-    xTaskCreatePinnedToCore(
-    Task_TDMA,        // Task function
-    "TDMA_Logic",     // Name
-    4096,             // Stack size
-    NULL,             // Parameters
-    5,                // Priority
-    NULL,             // Task handle
-    0                 // Core ID (0 or 1)
-    );
+    //xTaskCreatePinnedToCore(
+    //Task_TDMA,        // Task function
+    //"TDMA_Logic",     // Name
+    //4096,             // Stack size
+    //NULL,             // Parameters
+    //5,                // Priority
+    //NULL,             // Task handle
+    //0                 // Core ID (0 or 1)
+    //);
+    network_params.ready = true; //Sets the global flag to true. so we know we can use
     
 };
 
@@ -99,7 +100,6 @@ void IRAM_ATTR TimerAlarm() {
 
 void Task_TDMA(void *pvParameters) {
     static uint8_t Tx_node = 0;
-    network_params.ready = true; //Sets the global flag to true. so we know we can use
     for (;;) {
         // Vent her. bruger 0% CPU indtil timerISR vækker den
         if (xSemaphoreTake(TDMA_mux, portMAX_DELAY) == pdPASS) { //Tager TDMA semafor
@@ -126,7 +126,7 @@ void Task_TDMA(void *pvParameters) {
                     if(radio.available()){
                         block_item buf;
                         radio.read(buf.block_payload, 32);
-                        radio.getCRCLength();
+                        buf.ID = Tx_node;
                         xQueueSend(rx_blockqueue, &buf, 0); //Sends the block through the queueeueue.
                     }
                 }

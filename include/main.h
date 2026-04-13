@@ -32,14 +32,33 @@ void modem_rx();
 //Write and read queue for le modem, kan først bruges efter network_params.ready == true
 #define RX_queue_size 100
 #define TX_queue_size 100
-extern QueueHandle_t tx_blockqueue;
-extern QueueHandle_t rx_blockqueue;
+
 
 
 
 //Alt i de her fucking radioer foregår i blocks, så vi skal have styr på vores blocks
 struct block_item{
     uint8_t block_payload[32] = {0};
-    bool crc = false;
+    int8_t ID = 0;
     void print_payload();
 };
+
+
+//* Vores chopper af pakker Koster 
+void setup_chopper();
+extern QueueHandle_t rx_package_queue;
+extern QueueHandle_t tx_package_queue;
+
+
+
+// De variable pakker vi bruger
+struct Package_queue_item
+{
+    uint8_t data[1024] = {0};
+    uint16_t length = 0;
+    void debug_msg();
+};
+
+
+extern QueueHandle_t tx_blockqueue;
+extern QueueHandle_t rx_blockqueue;

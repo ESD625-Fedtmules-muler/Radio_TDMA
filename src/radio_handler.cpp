@@ -9,17 +9,29 @@
 RF24 radio(PIN_CE, PIN_CSN);
 
 
-void block_item::print_payload(){
-  Serial.printf("Payload (hex):\n");
-  for (int i = 0; i < 32; i++) {
-      // Print byte i 2-cifret hex
-      Serial.printf("%02X ", block_payload[i]);
-      // Ny linje hver 8 bytes for readability
-      if ((i + 1) % 8 == 0) {
-          Serial.printf("\n");
-      }
-  }
-  Serial.printf("CRC: %s\n", crc ? "true" : "false");
+void block_item::print_payload()
+{
+    Serial.printf("Block payload [32 bytes]:\n");
+
+    for (int i = 0; i < 32; i++)
+    {
+        if (i % 8 == 0)
+            Serial.printf("  %02X: ", i);
+
+        Serial.printf("%02X ", block_payload[i]);
+
+        if (i % 8 == 7)
+        {
+            Serial.print(" |");
+            for (int j = i - 7; j <= i; j++)
+            {
+                char c = block_payload[j];
+                Serial.print((c >= 32 && c < 127) ? c : '.');
+            }
+            Serial.println("|");
+        }
+    }
+    Serial.println();
 }
 
 
