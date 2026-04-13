@@ -19,7 +19,6 @@ struct GPSData
 {
     float latitude;
     float longitude;
-    String rawSentence;
     bool hasUpdate;
 };
 extern GPSData currentGPS;

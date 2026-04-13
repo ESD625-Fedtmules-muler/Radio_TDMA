@@ -6,13 +6,18 @@
 
 HardwareSerial gpsSerial(1); // Use UART1 for GPS communication
 TinyGPSPlus gps;
-GPSData currentGPS = {0.0, 0.0, "", false};
+GPSData currentGPS = {0.0, 0.0, false};
 
 void Task_GPS(void *pvParameter);
 
 void GPS_setup() {
-    //gpsSerial.begin(9600); // RX, TX pins for GPS
+    
+    // Det reset skal sendes til nogle af dem, for at sikre at GPS'en sender mere end bare GPGLL (For at tinyGPS virker)
+    byte resetConfig[] = {0xB5, 0x62, 0x06, 0x09, 0x0D, 0x00, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0x00, 0x00, 0x01, 0x19, 0x98};
     gpsSerial.begin(9600, SERIAL_8N1, PIN_GPS_RX, PIN_GPS_TX);
+    delay(100);
+    gpsSerial.write(resetConfig, sizeof(resetConfig));
+
     Serial.println("GPS serial initialized");
 
     xTaskCreatePinnedToCore(
@@ -28,36 +33,18 @@ void GPS_setup() {
 
 
 void Task_GPS(void *pvParameter) {
-    String lineBuffer = "";
-    
+    char c;
     for(;;) {
         while (gpsSerial.available() > 0) {
-            char c = gpsSerial.read();
-            lineBuffer += c;
-
-            if (c == '\n') {
-                lineBuffer.trim();
-
-                if (lineBuffer.startsWith("$GPGLL")) {
-                    int firstComma = lineBuffer.indexOf(',');
-                    int secondComma = lineBuffer.indexOf(',', firstComma + 1);
-                    int thirdComma = lineBuffer.indexOf(',', secondComma + 1);
-                    int fourthComma = lineBuffer.indexOf(',', thirdComma + 1);
-
-                    if (secondComma > firstComma && fourthComma > thirdComma) {
-                        String latRaw = lineBuffer.substring(firstComma + 1, secondComma);
-                        String lngRaw = lineBuffer.substring(thirdComma + 1, fourthComma);
-                        
-                        // Gem data i den globale struktur
-                        currentGPS.latitude = latRaw.substring(0, 2).toFloat() + (latRaw.substring(2).toFloat() / 60.0);
-                        currentGPS.longitude = lngRaw.substring(0, 3).toFloat() + (lngRaw.substring(3).toFloat() / 60.0);
-                        currentGPS.rawSentence = lineBuffer;
-                        currentGPS.hasUpdate = true;
-                    }
+            c = gpsSerial.read();
+            if (gps.encode(c)) { 
+                if (gps.location.isUpdated()) {
+                    currentGPS.latitude = gps.location.lat();
+                    currentGPS.longitude = gps.location.lng();
+                    currentGPS.hasUpdate = true;
                 }
-                lineBuffer = ""; 
             }
         }
-        vTaskDelay(pdMS_TO_TICKS(10));
+        vTaskDelay(pdMS_TO_TICKS(100)); 
     }
 }
