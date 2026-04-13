@@ -15,6 +15,15 @@ struct Network_params
 };
 extern Network_params network_params;
 
+struct GPSData 
+{
+    float latitude;
+    float longitude;
+    String rawSentence;
+    bool hasUpdate;
+};
+extern GPSData currentGPS;
+
 
 extern RF24 radio; //Radio til at skrive og læse Bits eller bytes 
 
@@ -27,7 +36,7 @@ void setup_modem(rf24_pa_dbm_e power_level);
 void modem_tx();
 void modem_rx();
 
-
+void GPS_setup();
 
 //Write and read queue for le modem, kan først bruges efter network_params.ready == true
 #define RX_queue_size 100

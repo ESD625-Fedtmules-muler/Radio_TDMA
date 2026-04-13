@@ -3,10 +3,6 @@
 #include "ESP32-c3_pinout.h"
 #include "main.h"
 
-HardwareSerial gpsSerial(1); // Use UART1 for GPS communication
-TinyGPSPlus gps;
-
-
 void RX_interface(void *pvParameters){
 
     while (network_params.ready != true)
@@ -29,10 +25,10 @@ void setup() {
     Serial.begin(115200);
     delay(1000);
     Serial.println("Serial initialized");
-    gpsSerial.begin(9600); // RX, TX pins for GPS
-    Serial.println("GPS serial initialized");
+
 
     TDMA_setup(NODE_ID);
+    GPS_setup();
     setup_modem(RF24_PA_MAX);
     xTaskCreate(RX_interface, "RX_interface", 2048, NULL, 2, NULL);
     while (network_params.ready != true)
