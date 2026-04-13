@@ -14,7 +14,7 @@ HammingCodec codec(w_parity, wo_parity);
 
 //De her 2 de findes ude i verden et sted
 extern QueueHandle_t tx_blockqueue;
-extern QueueHandle_t rx_blockqueue;
+extern QueueHandle_t rx_blockqueue[MAX_NODES];
 
 QueueHandle_t rx_package_queue;
 QueueHandle_t tx_package_queue;
@@ -105,16 +105,20 @@ struct dechopper_header
 };
 
 
+struct param_dechopper{
+    QueueHandle_t ListenerQueue;
+};
 
 void task_dechopper(void *pvParameters)
 {
-
+    param_dechopper* params = (param_dechopper*)pvParameters;
+    QueueHandle_t listener_queue = params->ListenerQueue; 
     while (true)
     {        
         block_item incoming_block;
 
         // Vent på første blok - den skal være en header
-        if (!xQueueReceive(rx_blockqueue, &incoming_block, portMAX_DELAY))
+        if (!xQueueReceive(listener_queue, &incoming_block, portMAX_DELAY))
             continue;
         // Forsøg at decode headeren
         dechopper_header header;
@@ -124,8 +128,6 @@ void task_dechopper(void *pvParameters)
             Serial.print("Header error\n");
             continue;
         }
-        Serial.print("Header good, number of frames:");
-        Serial.println(header.number_of_frames);
 
 
         // Nu ved vi hvor mange frames der følger
@@ -136,7 +138,7 @@ void task_dechopper(void *pvParameters)
         for (uint8_t frame = 0; frame < header.number_of_frames; frame++)
         {
             block_item data_block;
-            if (!xQueueReceive(rx_blockqueue, &data_block, portMAX_DELAY))
+            if (!xQueueReceive(listener_queue, &data_block, portMAX_DELAY))
             {
                 assembly_ok = false;
                 break;
@@ -198,22 +200,15 @@ void task_chopper(void *pvParameters){
                 xQueueSend(tx_blockqueue, &outputbuffer, portMAX_DELAY);
             }
 
-            // Loopback inde i if-blokken så den kun kører efter en hel pakke
-            block_item buf;
-            while(xQueueReceive(tx_blockqueue, &buf, 0)){
-                xQueueSend(rx_blockqueue, &buf, portMAX_DELAY);
-            }
+
         }
         ///Loopback
         block_item buf;
         while(xQueueReceive(tx_blockqueue, &buf, 0)){
             loop_counter++;
 
-            xQueueSend(rx_blockqueue, &buf, portMAX_DELAY);
+            xQueueSend(rx_blockqueue[0], &buf, portMAX_DELAY);
         }
-        Serial.print("Loop counter is: ");
-
-        Serial.print(loop_counter);
     }
 }
 
@@ -221,7 +216,7 @@ void task_chopper(void *pvParameters){
 
 void setup_chopper(){
     codec.begin();
-    tx_package_queue = xQueueCreate(5, sizeof(Package_queue_item));
+    tx_package_queue = xQueueCreate(10, sizeof(Package_queue_item));
     rx_package_queue = xQueueCreate(5, sizeof(Package_queue_item));
     
     xTaskCreatePinnedToCore(
@@ -233,15 +228,25 @@ void setup_chopper(){
     NULL,             // Task handle
     1                 // Core ID (0 or 1)
     );
-    xTaskCreatePinnedToCore(
-    task_dechopper,        // Task function
-    "De-chopper",     // Name
-    4096,             // Stack size
-    NULL,             // Parameters
-    6,                // Priority
-    NULL,             // Task handle
-    1                 // Core ID (0 or 1)
-    );
+
+    //Så skal vi lige have spawnet 10 dechoppers
+
+    
+    for (size_t i = 0; i < MAX_NODES; i++)
+    {
+        param_dechopper params;
+        params.ListenerQueue = rx_blockqueue[i];
+
+        xTaskCreatePinnedToCore(
+            task_dechopper,        // Task function
+            "De-chopper",     // Name
+            4096,             // Stack size
+            &params,             // Parameters
+            6,                // Priority
+            NULL,             // Task handle
+            1                 // Core ID (0 or 1)
+        );
+    }
 }
 
 

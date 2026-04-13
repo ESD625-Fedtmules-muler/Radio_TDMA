@@ -28,8 +28,6 @@ void RX_interface(void *pvParameters){
 void setup() {
     Serial.begin(115200);
     delay(1000);
-    //Serial.println("Serial initialized");
-    //gpsSerial.begin(9600); // RX, TX pins for GPS
     Serial.println("GPS serial initialized");
 
     TDMA_setup(NODE_ID);
@@ -54,6 +52,7 @@ void setup() {
 
 void loop() {
     delay(5000);
+
     Package_queue_item pkg_to_send;
     size_t len = snprintf((char*)pkg_to_send.data, sizeof(pkg_to_send.data), "Sut min dillerpostej %d, 123456789_123456789_123456789_123456789_123456789_123456789_123456789_123456789_123456789_123456789_123456789_123456789_123456789_123456789_123456789 %d", millis(), millis()/1000);
     pkg_to_send.length = len;

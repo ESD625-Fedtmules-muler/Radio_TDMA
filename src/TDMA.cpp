@@ -20,7 +20,7 @@ void IRAM_ATTR pps_isr();
 
 /// @brief De 2 queues med valide radioblocke vi kan sende.
 QueueHandle_t tx_blockqueue = NULL;
-QueueHandle_t rx_blockqueue = NULL;
+QueueHandle_t rx_blockqueue[MAX_NODES];
 
 const uint32_t t_margin = 1000; //Margin for dropping out of rx and tx mode in microseconds
 uint32_t t_slot;
@@ -34,7 +34,12 @@ void TDMA_setup(uint8_t my_id) {
 
     //De 2 queues vi stabler blocks i.
     tx_blockqueue = xQueueCreate(TX_queue_size, sizeof(block_item));
-    rx_blockqueue = xQueueCreate(TX_queue_size, sizeof(block_item));
+
+    //Array af queues.
+    for (int i = 0; i < network_params.number_of_nodes; i++)
+    {
+        rx_blockqueue[i] = xQueueCreate(TX_queue_size, sizeof(block_item));
+    }
 
 
     pinMode(GPIO_3, OUTPUT);
@@ -127,7 +132,7 @@ void Task_TDMA(void *pvParameters) {
                         block_item buf;
                         radio.read(buf.block_payload, 32);
                         buf.ID = Tx_node;
-                        xQueueSend(rx_blockqueue, &buf, 0); //Sends the block through the queueeueue.
+                        xQueueSend(rx_blockqueue[Tx_node], &buf, 0); //Sends the block through the queueeueue.
                     }
                 }
                 digitalWrite(PIN_SDA, LOW);
