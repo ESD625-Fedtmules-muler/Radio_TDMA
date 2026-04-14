@@ -36,6 +36,7 @@ bool network_package::add_hop(uint8_t node_id){
     }
     this->hop_list[this->hops] = node_id;
     this->hops++;
+    return true;
 }
 
 
