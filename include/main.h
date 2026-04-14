@@ -61,3 +61,37 @@ struct Package_queue_item
 
 
 extern QueueHandle_t tx_blockqueue;
+
+
+
+
+
+enum MSG_type_t{
+    Near_cast = 0,
+    Broadcast = 1,
+    P2P = 2,
+};
+
+
+
+typedef struct {
+    uint16_t len;
+    uint8_t data[512];
+} payload_buffer_t;
+
+
+// Vores endelige netværkspakke hihi
+class network_package{
+    public: //illegal
+        uint16_t source_UID;
+        uint8_t nonce;
+        uint16_t dest_UID;
+        MSG_type_t msg_type = P2P;
+        uint8_t hops = 0;
+        uint8_t hop_list[16] = {0};
+        payload_buffer_t payload;
+    bool parse_header(Package_queue_item* original_buffer);
+    bool parse_payload(Package_queue_item* original_buffer);
+    bool serialize(Package_queue_item* dest);
+    bool add_hop(uint8_t);
+};

@@ -9,30 +9,7 @@
 RF24 radio(PIN_CE, PIN_CSN);
 
 
-void block_item::print_payload()
-{
-    Serial.printf("Block payload [32 bytes]:\n");
 
-    for (int i = 0; i < 32; i++)
-    {
-        if (i % 8 == 0)
-            Serial.printf("  %02X: ", i);
-
-        Serial.printf("%02X ", block_payload[i]);
-
-        if (i % 8 == 7)
-        {
-            Serial.print(" |");
-            for (int j = i - 7; j <= i; j++)
-            {
-                char c = block_payload[j];
-                Serial.print((c >= 32 && c < 127) ? c : '.');
-            }
-            Serial.println("|");
-        }
-    }
-    Serial.println();
-}
 
 
 bool Assert_setting(bool result, const char* msg){

@@ -27,8 +27,6 @@ void RX_interface(void *pvParameters){
 
 void setup() {
     Serial.begin(115200);
-    delay(1000);
-    Serial.println("GPS serial initialized");
 
     TDMA_setup(NODE_ID);
     setup_chopper();

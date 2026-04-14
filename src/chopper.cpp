@@ -16,49 +16,8 @@ HammingCodec codec(w_parity, wo_parity);
 extern QueueHandle_t tx_blockqueue;
 extern QueueHandle_t rx_blockqueue[MAX_NODES];
 
-QueueHandle_t rx_package_queue;
+QueueHandle_t rx_package_queue; //QUeues for de packages after the chopper
 QueueHandle_t tx_package_queue;
-
-
-
-void Package_queue_item::debug_msg()
-{
-    Serial.printf("Package [%u bytes]:\n", this->length);
-
-    for (uint16_t i = 0; i < this->length; i++)
-    {
-        // Adresse i starten af hver række
-        if (i % 16 == 0)
-            Serial.printf("  %04X: ", i);
-
-        Serial.printf("%02X ", this->data[i]);
-
-        // ASCII-kolonne + linjeskift i slutningen af hver række
-        if ((i % 16 == 15) || (i == this->length - 1))
-        {
-            // Pad hvis sidste række ikke er fuld
-            uint16_t pad = 15 - (i % 16);
-            for (uint16_t p = 0; p < pad; p++)
-                Serial.print("   ");
-
-            Serial.print(" |");
-            uint16_t row_start = i - (i % 16);
-            for (uint16_t j = row_start; j <= i; j++)
-            {
-                char c = this->data[j];
-                Serial.print((c >= 32 && c < 127) ? c : '.');
-            }
-            Serial.println("|");
-        }
-    }
-    Serial.println();
-}
-
-
-
-
-
-
 
 
 
