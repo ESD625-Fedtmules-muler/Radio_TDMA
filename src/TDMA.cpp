@@ -53,20 +53,20 @@ void TDMA_setup(uint8_t my_id) {
     Serial.print("Tids slots er:");
     Serial.print(t_slot / 1000);
     Serial.println("ms");
-    //TDMA_mux = xSemaphoreCreateBinary();
-    //hw_timer = timerBegin(0, 80, true);  //80Mhz div med 80 = 1Mhz = 1us
-    //timerAttachInterrupt(hw_timer, &TimerAlarm, true);
-    //timerAlarmWrite(hw_timer, t_slot, true); //used to set counter value of the timer.
+    TDMA_mux = xSemaphoreCreateBinary();
+    hw_timer = timerBegin(0, 80, true);  //80Mhz div med 80 = 1Mhz = 1us
+    timerAttachInterrupt(hw_timer, &TimerAlarm, true);
+    timerAlarmWrite(hw_timer, t_slot, true); //used to set counter value of the timer.
     //Freertos tasks.
-    //xTaskCreatePinnedToCore(
-    //Task_TDMA,        // Task function
-    //"TDMA_Logic",     // Name
-    //4096,             // Stack size
-    //NULL,             // Parameters
-    //5,                // Priority
-    //NULL,             // Task handle
-    //0                 // Core ID (0 or 1)
-    //);
+    xTaskCreatePinnedToCore(
+    Task_TDMA,        // Task function
+    "TDMA_Logic",     // Name
+    4096,             // Stack size
+    NULL,             // Parameters
+    5,                // Priority
+    NULL,             // Task handle
+    0                 // Core ID (0 or 1)
+    );
     network_params.ready = true; //Sets the global flag to true. so we know we can use
     
 };
@@ -117,7 +117,9 @@ void Task_TDMA(void *pvParameters) {
                 {
                     block_item buf;
                     if(xQueueReceive(tx_blockqueue, &buf, 0) == pdTRUE){ //There is something we need to transmit
+                        digitalWrite(PIN_SCL, HIGH);
                         radio.write(buf.block_payload, 32);
+                        digitalWrite(PIN_SCL, LOW);
                     }
                 }
                 modem_rx();
@@ -125,7 +127,6 @@ void Task_TDMA(void *pvParameters) {
             else {
                 uint32_t t_start = micros(); //Husker vores starttidspunkt.
                 //TODO Over i Radio TX
-                digitalWrite(PIN_SDA, HIGH);
                 while ((micros() - t_start) < (t_slot - t_margin)) //Så længde vi måe slås med radioen.
                 {
                     if(radio.available()){
@@ -135,8 +136,6 @@ void Task_TDMA(void *pvParameters) {
                         xQueueSend(rx_blockqueue[Tx_node], &buf, 0); //Sends the block through the queueeueue.
                     }
                 }
-                digitalWrite(PIN_SDA, LOW);
-
                 //TODO Radio til Rx
                 //! Du lugter af ost
                 //* Og det bare ret vigtigt

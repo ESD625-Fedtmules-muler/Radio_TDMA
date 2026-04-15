@@ -73,7 +73,6 @@ void block_item::print_payload()
     {
         if (i % 8 == 0)
             Serial.printf("  %02X: ", i);
-
         Serial.printf("%02X ", block_payload[i]);
 
         if (i % 8 == 7)
@@ -121,4 +120,51 @@ void Package_queue_item::debug_msg()
         }
     }
     Serial.println();
+}
+
+
+void network_package::debug_msg() {
+    Serial.println("=== Network Package ===");
+    Serial.printf("  Source UID:  0x%04X\n", source_UID);
+    Serial.printf("  Dest UID:    0x%04X\n", dest_UID);
+    Serial.printf("  Nonce:       0x%02X\n", nonce);
+    Serial.printf("  Msg type:    %d\n",     msg_type);
+    Serial.printf("  Hops:        %d\n",     hops);
+
+    Serial.print("  Hop list:    ");
+    for (size_t i = 0; i < hops; i++) {
+        Serial.printf("0x%02X ", hop_list[i]);
+    }
+    Serial.println();
+
+    Serial.printf("  Payload len: %d\n", payload.len);
+    Serial.println("  Payload hex dump:");
+
+    constexpr size_t row_width = 16;
+    for (size_t i = 0; i < payload.len; i += row_width) {
+        // Adresse
+        Serial.printf("    %04X:  ", i);
+
+        // Hex del
+        for (size_t j = 0; j < row_width; j++) {
+            if (i + j < payload.len) {
+                Serial.printf("%02X ", payload.data[i + j]);
+            } else {
+                Serial.print("   "); // padding hvis sidste række ikke er fuld
+            }
+        }
+
+        Serial.print(" | ");
+
+        // ASCII del
+        for (size_t j = 0; j < row_width; j++) {
+            if (i + j < payload.len) {
+                uint8_t c = payload.data[i + j];
+                Serial.printf("%c", (c >= 0x20 && c < 0x7F) ? c : '.');
+            }
+        }
+
+        Serial.println();
+    }
+    Serial.println("======================");
 }

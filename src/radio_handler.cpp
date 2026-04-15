@@ -45,7 +45,6 @@ void setup_modem(rf24_pa_dbm_e power_level){
 void modem_tx(){
   radio.stopListening(); //Fortæller svinet den skal gå i tx
   //TODO Sætte GPIO rf switches
-  digitalWrite(PIN_SCL, HIGH);
 }
 
 
@@ -53,5 +52,4 @@ void modem_tx(){
 void modem_rx(){
   radio.startListening();
   //TODO Sætte GPIO rf switches
-  digitalWrite(PIN_SCL, LOW);
 }

@@ -156,18 +156,13 @@ void task_chopper(void *pvParameters){
                 block_item outputbuffer;
                 codec.encode(&input_package.data[f * bytes_pr_frame], flen,
                             outputbuffer.block_payload, 32);
+                    
                 xQueueSend(tx_blockqueue, &outputbuffer, portMAX_DELAY);
             }
 
 
         }
-        ///Loopback
-        block_item buf;
-        while(xQueueReceive(tx_blockqueue, &buf, 0)){
-            loop_counter++;
 
-            xQueueSend(rx_blockqueue[0], &buf, portMAX_DELAY);
-        }
     }
 }
 

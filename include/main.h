@@ -80,18 +80,63 @@ typedef struct {
 } payload_buffer_t;
 
 
-// Vores endelige netværkspakke hihi
-class network_package{
-    public: //illegal
-        uint16_t source_UID;
-        uint8_t nonce;
-        uint16_t dest_UID;
-        MSG_type_t msg_type = P2P;
-        uint8_t hops = 0;
-        uint8_t hop_list[16] = {0};
-        payload_buffer_t payload;
+
+
+//* ALT til routeren
+
+/// @brief Repræsenterer en netværkspakke i vores mesh protokol.
+/// Brug parse_header() + parse_payload() til at deserialisere fra et Package_queue_item,
+/// eller serialize() til at gøre den klar til afsendelse.
+class network_package {
+public: //illegal
+    uint16_t source_UID;                ///< UID på afsender noden
+    uint8_t  nonce;                     ///< Unikt pakke-ID til duplikat detektion
+    uint16_t dest_UID;                  ///< UID på modtager noden
+    MSG_type_t msg_type = P2P;          ///< P2P, broadcast eller nearcast
+    uint8_t  hops = 0;                  ///< Antal hops pakken har rejst indtil nu
+    uint8_t  hop_list[16] = {0};        ///< Liste over noder pakken har passeret igennem
+    payload_buffer_t payload;           ///< Den egentlige payload data
+
+    /// @brief Parser kun headeren fra et Package_queue_item.
+    /// Kan bruges til tidlig drop af pakker der ikke er til os, uden at parse payload.
+    /// @param original_buffer Buffer der skal parses fra
+    /// @return true hvis headeren er valid og blev parset korrekt
     bool parse_header(Package_queue_item* original_buffer);
+
+    /// @brief Parser payload fra et Package_queue_item — kald parse_header() først.
+    /// @param original_buffer Samme buffer som blev brugt til parse_header()
+    /// @return true hvis payload er valid og blev parset korrekt
     bool parse_payload(Package_queue_item* original_buffer);
+
+    /// @brief Serialiserer pakken ind i et Package_queue_item klar til afsendelse.
+    /// @param dest Destination buffer
+    /// @return true hvis serialiseringen lykkedes
     bool serialize(Package_queue_item* dest);
-    bool add_hop(uint8_t);
+
+    /// @brief Tilføjer en hop til hop_list og incrementerer hops tælleren.
+    /// @param uid UID på noden der skal tilføjes
+    /// @return true hvis der var plads i hop_list
+    bool add_hop(uint8_t uid);
+
+    /// @brief Printer hele pakken som hex dump til Serial — kun til debugging.
+    void debug_msg();
 };
+
+/// @brief Starter tasken der kører vores router samt, sætter listener queues op.
+void setup_router();
+
+
+void router_send_data(uint16_t dest_UID, uint16_t src_UID, uint8_t* buffer, size_t length);
+
+
+/// @brief Fjerner den listener og dræber køen
+/// @param UID det unikke userID der lavede køen
+/// @return true hvis det gik godt
+bool router_remove_listener(uint16_t UID);
+
+
+/// @brief Sets up a listener for the UID
+/// @param UID A unique user id expected to be transmitted to
+/// @param queuesize How large the queue should be
+/// @return xQueueCreate(queuesize, sizeof(network_package));
+QueueHandle_t router_setup_listener(uint16_t UID, uint16_t queuesize);
