@@ -52,7 +52,7 @@ QueueHandle_t Recv_queues[max_number_listenings] = {NULL}; //Tilhørende Queues 
 bool check_user_listerning(network_package* rx_network_package, size_t* rx_userchannel){
     for (size_t i = 0; i < max_number_listenings; i++)
     {
-        if(rx_network_package->source_UID == listening_UIDS[i]){
+        if(rx_network_package->dest_UID == listening_UIDS[i]){
             *rx_userchannel = i;
             return true;
         }
