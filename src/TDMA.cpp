@@ -3,7 +3,7 @@
 #include "main.h"
 
 Network_params network_params;
-
+//GPSData currentGPS;
 volatile uint8_t node_counter = 0; 
 
 hw_timer_t * hw_timer = NULL; //Hardware timer fra arduino lib
@@ -58,7 +58,7 @@ void TDMA_setup(uint8_t my_id) {
     "TDMA_Logic",     // Name
     4096,             // Stack size
     NULL,             // Parameters
-    5,                // Priority
+    20,                // Priority
     NULL,             // Task handle
     0                 // Core ID (0 or 1)
     );
@@ -99,14 +99,34 @@ void IRAM_ATTR TimerAlarm() {
 
 void Task_TDMA(void *pvParameters) {
     static uint8_t Tx_node = 0;
+    AntennaDir antenna_dir;
     network_params.ready = true; //Sets the global flag to true. so we know we can use
     for (;;) {
         // Vent her. bruger 0% CPU indtil timerISR vækker den
         if (xSemaphoreTake(TDMA_mux, portMAX_DELAY) == pdPASS) { //Tager TDMA semafor
             
             Tx_node = node_counter % network_params.number_of_nodes;
+
             if (Tx_node == network_params.node_id) {
                 uint32_t t_start = micros(); //Husker vores starttidspunkt.
+
+                antenna_dir = get_antenna_dir(Tx_node);
+                //TODO set_switches(antenna_dir);
+
+/*                 if (currentGPS.hasUpdate == 1) {
+                    Serial.println("GPS er opdateret");
+                    Serial.print("Lat: ");
+                    Serial.print(currentGPS.latitude, 6);
+                    Serial.print(" Long:");
+                    Serial.println(currentGPS.longitude, 6);
+                    currentGPS.hasUpdate = 0;
+                    Serial.print("Antenne dir er: ");
+                    Serial.println(antenna_dir);
+                } */
+
+
+
+
                 modem_tx();
                 while ((micros() - t_start) < (t_slot - t_margin)) //Så længde vi måe slås med radioen. Sikrer os i bund og grund en bagkant.
                 {
@@ -119,7 +139,18 @@ void Task_TDMA(void *pvParameters) {
             }
             else {
                 uint32_t t_start = micros(); //Husker vores starttidspunkt.
-                //TODO Over i Radio TX
+
+                antenna_dir = get_antenna_dir(Tx_node);
+                //TODO set_switches(antenna_dir);
+                
+                Serial.print("Tx node: ");
+                Serial.println(Tx_node);
+                Serial.print("Antenne DIR: ");
+                Serial.println(antenna_dir);
+
+
+
+                //TODO Over i Radio RX
                 digitalWrite(PIN_SDA, HIGH);
                 while ((micros() - t_start) < (t_slot - t_margin)) //Så længde vi måe slås med radioen.
                 {

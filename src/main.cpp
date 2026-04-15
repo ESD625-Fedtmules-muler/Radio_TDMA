@@ -29,6 +29,8 @@ void setup() {
 
     TDMA_setup(NODE_ID);
     GPS_setup();
+    table_setup();
+    switch_setup();
     setup_modem(RF24_PA_MAX);
     xTaskCreate(RX_interface, "RX_interface", 2048, NULL, 2, NULL);
     while (network_params.ready != true)
