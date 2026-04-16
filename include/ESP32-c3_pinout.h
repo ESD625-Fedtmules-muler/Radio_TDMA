@@ -7,7 +7,7 @@
 #define PIN_PPS     2
 #define PIN_SDA     3
 #define PIN_SCL     10
-#define PIN_CE      18
+#define PIN_CE      9// Rigigt 18
 #define PIN_CSN     8
 #define PIN_SCK     7
 #define PIN_MOSI    6
@@ -16,6 +16,13 @@
 #define PIN_GPS_TX  0
 #define PIN_GPS_RX  1
 
+#define PIN_I2C_SDA 18
+#define PIN_I2C_SCL 19
+//Det her er til det rigtige board
+/*
+#define PIN_I2C_SDA 1
+#define PIN_I2C_SCL 2
+*/
 
 
 //!Wtf dude

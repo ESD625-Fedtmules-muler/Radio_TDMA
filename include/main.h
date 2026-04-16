@@ -2,6 +2,9 @@
 #include <RF24.h>
 
 #define MAX_NUMBER_OF_NODES 10
+#define TRACK_NODE_ID 2 
+#define STEPPER_I2C_ADDR 0x08
+
 
 //Vores netværksparametre 
 struct Network_params

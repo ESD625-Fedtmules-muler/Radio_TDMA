@@ -3,29 +3,47 @@
 #include <ESP32-c3_pinout.h>
 #include <main.h>
 #include <math.h>
+#include <Wire.h>
+
 
 
 // Tænker at sætte det op med en switch task der kan kaldes, som selv regner hvilken switch der skal sættes afhængig af hvilken Tx node der er.
 void Task_headings(void *pvParameter);
+void Task_base_heading(void *pvParameter);
 float calculate_bearing(float lat1, float lon1, float lat2, float lon2);
 AntennaDir get_antenna_dir(uint8_t tx_node_id);
+void send_azi_to_stepper(float angle);
 
 
 void switch_setup() {
-
     //TODO setup af switch pins
 
+    #if NODE_ID == 1
+        Wire.begin(PIN_I2C_SDA, PIN_I2C_SCL); // Start I2C som Master på C3
+        Serial.println("Base Mode: I2C Master initialized");
+        xTaskCreatePinnedToCore(
+        Task_base_heading,        // Task function
+        "Heading",     // Name
+        4096,             // Stack size
+        NULL,             // Parameters
+        2,                // Priority
+        NULL,             // Task handle
+        0                 // Core ID (0 or 1)
+        );
+    #endif
 
-    xTaskCreatePinnedToCore(
-    Task_headings,        // Task function
-    "Heading",     // Name
-    4096,             // Stack size
-    NULL,             // Parameters
-    2,                // Priority
-    NULL,             // Task handle
-    0                 // Core ID (0 or 1)
-    );
-
+    #if NODE_ID != 1
+        Serial.println("Drone Mode");
+        xTaskCreatePinnedToCore(
+        Task_headings,        // Task function
+        "Heading",     // Name
+        4096,             // Stack size
+        NULL,             // Parameters
+        2,                // Priority
+        NULL,             // Task handle
+        0                 // Core ID (0 or 1)
+        );
+    #endif
 }
 
 
@@ -53,6 +71,25 @@ void Task_headings(void *pvParameter){
         }
     }
 };
+
+void Task_base_heading(void *pvParameter){
+    for(;;){
+
+        float target_lat = look_up[TRACK_NODE_ID].latitude;
+        float target_lon = look_up[TRACK_NODE_ID].longitude;
+
+        // Hvis vi ikke har GPS data, sæt til OMNI
+        if (target_lat == 0) {
+            Serial.println("Venter på GPS info");
+            continue;
+        }
+        Serial.println("Starter heading udregning: ");
+        float brng = calculate_bearing(currentGPS.latitude, currentGPS.longitude, target_lat, target_lon);
+        send_azi_to_stepper(brng);
+        vTaskDelay(pdMS_TO_TICKS(200));
+    }
+};
+
 
 
 //Den her regner altså lige nu kun den absolutte heading! Vi skal have egen retning med for at få det sidste.
@@ -86,4 +123,12 @@ AntennaDir get_antenna_dir(uint8_t tx_node) {
         return DIR_TX_OMNI;
     }
     else return look_up[tx_node].switchState;
+}
+
+void send_azi_to_stepper(float angle) {
+    Serial.print("Sender nu over I2C: ");
+    Serial.println(angle, 6);
+    Wire.beginTransmission(STEPPER_I2C_ADDR);
+    Wire.write((byte*)&angle, 4);
+    Wire.endTransmission();
 }
