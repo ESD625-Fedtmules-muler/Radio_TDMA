@@ -16,7 +16,10 @@ void send_azi_to_stepper(float angle);
 
 
 void switch_setup() {
-    //TODO setup af switch pins
+
+    //Pins til Switch register
+    pinMode(PIN_SR_DAT, OUTPUT);
+    pinMode(PIN_SR_CLK, OUTPUT);
 
     #if NODE_ID == 1
         Wire.begin(PIN_I2C_SDA, PIN_I2C_SCL); // Start I2C som Master på C3
@@ -72,23 +75,6 @@ void Task_headings(void *pvParameter){
     }
 };
 
-void Task_base_heading(void *pvParameter){
-    for(;;){
-
-        float target_lat = look_up[TRACK_NODE_ID].latitude;
-        float target_lon = look_up[TRACK_NODE_ID].longitude;
-
-        // Hvis vi ikke har GPS data, sæt til OMNI
-        if (target_lat == 0) {
-            Serial.println("Venter på GPS info");
-            continue;
-        }
-        Serial.println("Starter heading udregning: ");
-        float brng = calculate_bearing(currentGPS.latitude, currentGPS.longitude, target_lat, target_lon);
-        send_azi_to_stepper(brng);
-        vTaskDelay(pdMS_TO_TICKS(200));
-    }
-};
 
 
 
@@ -124,6 +110,71 @@ AntennaDir get_antenna_dir(uint8_t tx_node) {
     }
     else return look_up[tx_node].switchState;
 }
+
+
+/*
+U3 switch til radio
+        01 TX
+        10 RX
+PA switch
+        01 RX
+        10 TX
+Antenne MUX
+        000 RF 1
+        001 RF 2
+        010 RF 3
+        011 RF 4
+        100 RF 5
+        101 RF 6
+        110 RF 7
+        111 RF 8  
+*/
+void set_switches(AntennaDir antenna_dir) {
+    static const byte antennaValues[] = {
+    0b00000110,    //ERROR,
+    0b00001001,    //DIR_TX_OMNI
+    0b00000110,    //DIR_RX_OMNI
+    0b00000110,    //DIR_RX_0
+    0b00010110,    //DIR_RX_1
+    0b00100110,    //DIR_RX_2
+    0b00110110,    //DIR_RX_3
+    0b01000110,    //DIR_RX_4
+    0b01010110,    //DIR_RX_5
+    0b01100110,    //DIR_RX_6
+    0b01110110    //DIR_RX_7
+    };
+
+    byte value = antennaValues[antenna_dir];
+    digitalWrite(PIN_SR_DAT, LOW);
+    shiftOut(PIN_SR_DAT, PIN_SR_CLK, MSBFIRST, value);
+    digitalWrite(PIN_SR_DAT, HIGH);
+    Serial.print("Har skiftet antenne");
+}
+
+
+
+
+
+/********************
+Kode som kun bliver brugt hvis det er uploadet som base (NODE1)
+**********************/
+void Task_base_heading(void *pvParameter){
+    for(;;){
+
+        float target_lat = look_up[TRACK_NODE_ID].latitude;
+        float target_lon = look_up[TRACK_NODE_ID].longitude;
+
+        // Hvis vi ikke har GPS data, sæt til OMNI
+        if (target_lat == 0) {
+            Serial.println("Venter på GPS info");
+            continue;
+        }
+        Serial.println("Starter heading udregning: ");
+        float brng = calculate_bearing(currentGPS.latitude, currentGPS.longitude, target_lat, target_lon);
+        send_azi_to_stepper(brng);
+        vTaskDelay(pdMS_TO_TICKS(200));
+    }
+};
 
 void send_azi_to_stepper(float angle) {
     Serial.print("Sender nu over I2C: ");

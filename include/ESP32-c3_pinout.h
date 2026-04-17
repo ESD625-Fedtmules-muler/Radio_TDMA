@@ -16,13 +16,20 @@
 #define PIN_GPS_TX  0
 #define PIN_GPS_RX  1
 
-#define PIN_I2C_SDA 18
-#define PIN_I2C_SCL 19
+
+//Brugt til at teste i2c
+//#define PIN_I2C_SDA 18
+//#define PIN_I2C_SCL 19
+
+
 //Det her er til det rigtige board
-/*
 #define PIN_I2C_SDA 1
 #define PIN_I2C_SCL 2
-*/
+#define PIN_SR_DAT 11
+#define PIN_SR_CLK 10
+
+
+
 
 
 //!Wtf dude
