@@ -39,8 +39,8 @@ void TDMA_setup(uint8_t my_id) {
 
     pinMode(GPIO_3, OUTPUT);
     //Til GPS.
-    pinMode(PIN_PPS, INPUT_PULLUP);
-    attachInterrupt(PIN_PPS, pps_isr, FALLING);
+    pinMode(PIN_GPS_PPS, INPUT_PULLUP);
+    attachInterrupt(PIN_GPS_PPS, pps_isr, FALLING);
 
     //Timer setup
     t_slot = 250000 / network_params.number_of_nodes;
@@ -109,30 +109,13 @@ void Task_TDMA(void *pvParameters) {
 
             if (Tx_node == network_params.node_id) {
                 uint32_t t_start = micros(); //Husker vores starttidspunkt.
-
-                antenna_dir = get_antenna_dir(Tx_node);
-                //TODO set_switches(antenna_dir);
-
-/*                 if (currentGPS.hasUpdate == 1) {
-                    Serial.println("GPS er opdateret");
-                    Serial.print("Lat: ");
-                    Serial.print(currentGPS.latitude, 6);
-                    Serial.print(" Long:");
-                    Serial.println(currentGPS.longitude, 6);
-                    currentGPS.hasUpdate = 0;
-                    Serial.print("Antenne dir er: ");
-                    Serial.println(antenna_dir);
-                } */
-
-
-
-
+                //antenna_dir = get_antenna_dir(Tx_node);
+                //set_switches(antenna_dir);
                 modem_tx();
-                while ((micros() - t_start) < (t_slot - t_margin)) //Så længde vi måe slås med radioen. Sikrer os i bund og grund en bagkant.
-                {
+                while ((micros() - t_start) < (t_slot - t_margin)) { //Så længde vi måe slås med radioen. Sikrer os i bund og grund en bagkant.
                     block_item buf;
                     if(xQueueReceive(tx_blockqueue, &buf, 0) == pdTRUE){ //There is something we need to transmit
-                        radio.write(buf.block_payload, 32);
+                    radio.write(buf.block_payload, 32);
                     }
                 }
                 modem_rx();
@@ -140,29 +123,17 @@ void Task_TDMA(void *pvParameters) {
             else {
                 uint32_t t_start = micros(); //Husker vores starttidspunkt.
 
-                antenna_dir = get_antenna_dir(Tx_node);
-                //TODO set_switches(antenna_dir);
-                
-                Serial.print("Tx node: ");
-                Serial.println(Tx_node);
-                Serial.print("Antenne DIR: ");
-                Serial.println(antenna_dir);
-
-
-
+                //antenna_dir = get_antenna_dir(Tx_node);
+                //set_switches(antenna_dir);
                 //TODO Over i Radio RX
-                digitalWrite(PIN_SDA, HIGH);
-                while ((micros() - t_start) < (t_slot - t_margin)) //Så længde vi måe slås med radioen.
-                {
-                    if(radio.available()){
+                while ((micros() - t_start) < (t_slot - t_margin)) { //Så længde vi måe slås med radioen.
+                     if(radio.available()){
                         block_item buf;
                         radio.read(buf.block_payload, 32);
                         radio.getCRCLength();
                         xQueueSend(rx_blockqueue, &buf, 0); //Sends the block through the queueeueue.
                     }
                 }
-                digitalWrite(PIN_SDA, LOW);
-
                 //TODO Radio til Rx
                 //! Du lugter af ost
                 //* Og det bare ret vigtigt

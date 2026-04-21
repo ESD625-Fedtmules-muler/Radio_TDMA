@@ -5,31 +5,32 @@
 #include <math.h>
 #include <Wire.h>
 
-
+TrackerNode trackerNodes[2];
 
 // Tænker at sætte det op med en switch task der kan kaldes, som selv regner hvilken switch der skal sættes afhængig af hvilken Tx node der er.
 void Task_headings(void *pvParameter);
 void Task_base_heading(void *pvParameter);
 float calculate_bearing(float lat1, float lon1, float lat2, float lon2);
 AntennaDir get_antenna_dir(uint8_t tx_node_id);
-void send_azi_to_stepper(float angle);
+void send_azi_to_stepper(float angle, int i2cAddr);
 
 
 void switch_setup() {
-
-    //Pins til Switch register
-    pinMode(PIN_SR_DAT, OUTPUT);
-    pinMode(PIN_SR_CLK, OUTPUT);
-
     #if NODE_ID == 1
         Wire.begin(PIN_I2C_SDA, PIN_I2C_SCL); // Start I2C som Master på C3
         Serial.println("Base Mode: I2C Master initialized");
+
+        trackerNodes[0].nodeID = 2;
+        trackerNodes[0].i2cAddress = 0x08;
+        trackerNodes[1].nodeID = 3;
+        trackerNodes[1].i2cAddress = 0x09;
+
         xTaskCreatePinnedToCore(
         Task_base_heading,        // Task function
         "Heading",     // Name
         4096,             // Stack size
         NULL,             // Parameters
-        2,                // Priority
+        5,                // Priority
         NULL,             // Task handle
         0                 // Core ID (0 or 1)
         );
@@ -37,6 +38,11 @@ void switch_setup() {
 
     #if NODE_ID != 1
         Serial.println("Drone Mode");
+        
+        //Pins til Switch register
+        //pinMode(PIN_SR_DAT, OUTPUT);
+        //pinMode(PIN_SR_CLK, OUTPUT);
+
         xTaskCreatePinnedToCore(
         Task_headings,        // Task function
         "Heading",     // Name
@@ -64,10 +70,10 @@ void Task_headings(void *pvParameter){
                 look_up[i].switchState = DIR_RX_OMNI;
                 continue;
             }
-            Serial.println("Starter heading udregning: ");
+            //Serial.println("Starter heading udregning: ");
             float brng = calculate_bearing(currentGPS.latitude, currentGPS.longitude, target_lat, target_lon);
             // TODO: Her skal vi lige trække vores egen "heading" fra, hvis vi ikke skal have absolut heading
-            Serial.println("Slutter heading her");
+            //Serial.println("Slutter heading her");
             int sector = (int)((brng + 22.5f) / 45.0f) % 8; // Chatten siger at vi deler antennerne op i 8 dele
             look_up[i].switchState = (AntennaDir)(DIR_RX_0 + sector);
             vTaskDelay(pdMS_TO_TICKS(200));
@@ -95,10 +101,10 @@ float calculate_bearing(float lat1, float lon1, float lat2, float lon2) {
     float bearing = theta * (180.0 / M_PI);
 
     // Normaliser til 0-360 grader (Kan vi lige selv vælge om vi gider)
-    if (bearing < 0) {
+    /* if (bearing < 0) {
         bearing += 360.0;
     }
-    
+     */
     return bearing;
 }
 
@@ -145,9 +151,9 @@ void set_switches(AntennaDir antenna_dir) {
     };
 
     byte value = antennaValues[antenna_dir];
-    digitalWrite(PIN_SR_DAT, LOW);
+    /* digitalWrite(PIN_SR_DAT, LOW);
     shiftOut(PIN_SR_DAT, PIN_SR_CLK, MSBFIRST, value);
-    digitalWrite(PIN_SR_DAT, HIGH);
+    digitalWrite(PIN_SR_DAT, HIGH); */
     Serial.print("Har skiftet antenne");
 }
 
@@ -160,26 +166,36 @@ Kode som kun bliver brugt hvis det er uploadet som base (NODE1)
 **********************/
 void Task_base_heading(void *pvParameter){
     for(;;){
+        for (int i = 0; i < 2; i++) {
+            int node_ID = trackerNodes[i].nodeID;
+            int i2cAddr = trackerNodes[i].i2cAddress;
 
-        float target_lat = look_up[TRACK_NODE_ID].latitude;
-        float target_lon = look_up[TRACK_NODE_ID].longitude;
+            if (look_up[node_ID].hasUpdate) {
+                float target_lat = look_up[node_ID].latitude;
+                float target_lon = look_up[node_ID].longitude;
 
-        // Hvis vi ikke har GPS data, sæt til OMNI
-        if (target_lat == 0) {
-            Serial.println("Venter på GPS info");
-            continue;
+                if (target_lat == 0) {
+                    continue; 
+                }
+
+                float brng = calculate_bearing(currentGPS.latitude, currentGPS.longitude, target_lat, target_lon);
+                
+                // Vi sender nu til den SPECIFIKKE I2C adresse
+                send_azi_to_stepper(brng, i2cAddr);
+                
+                look_up[node_ID].hasUpdate = false;
+            }
         }
-        Serial.println("Starter heading udregning: ");
-        float brng = calculate_bearing(currentGPS.latitude, currentGPS.longitude, target_lat, target_lon);
-        send_azi_to_stepper(brng);
         vTaskDelay(pdMS_TO_TICKS(200));
     }
-};
+}
 
-void send_azi_to_stepper(float angle) {
-    Serial.print("Sender nu over I2C: ");
-    Serial.println(angle, 6);
-    Wire.beginTransmission(STEPPER_I2C_ADDR);
-    Wire.write((byte*)&angle, 4);
+void send_azi_to_stepper(float angle, int i2cAddr) {
+    Serial.print("Skriver til: ");
+    Serial.println(i2cAddr);
+    Serial.print("Med denne vinkel: ");
+    Serial.println(angle);
+    Wire.beginTransmission(i2cAddr);
+    Wire.write((byte*)&angle, sizeof(float)); 
     Wire.endTransmission();
 }

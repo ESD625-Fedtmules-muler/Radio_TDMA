@@ -6,7 +6,14 @@
 
 HardwareSerial gpsSerial(1); // Use UART1 for GPS communication
 TinyGPSPlus gps;
-GPSData currentGPS = {0.0, 0.0, false};
+
+#if NODE_ID == 1
+    GPSData currentGPS = { 57.013928, 9.987330, true};
+#endif
+
+#if NODE_ID != 1   
+    GPSData currentGPS = {0.0, 0.0, false};
+#endif
 
 void Task_GPS(void *pvParameter);
 

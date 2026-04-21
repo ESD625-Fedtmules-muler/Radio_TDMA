@@ -14,6 +14,7 @@ void table_setup() {
         look_up[i].longitude = 0;
         look_up[i].rssi = -100;
         look_up[i].switchState = ERROR;
+        look_up[i].hasUpdate = true;
     }
 
     // Test koordinater til vilkårlige noder!
@@ -32,4 +33,5 @@ void update_node(int index, float lat, float lon, int rssi) {
     look_up[index].latitude = lat;
     look_up[index].longitude = lon;
     look_up[index].rssi = rssi;
+    look_up[index].hasUpdate = true;
 }

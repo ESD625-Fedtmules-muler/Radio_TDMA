@@ -2,9 +2,14 @@
 #include <RF24.h>
 
 #define MAX_NUMBER_OF_NODES 10
-#define TRACK_NODE_ID 2 
-#define STEPPER_I2C_ADDR 0x08
+#define TRACK_NODE_ID_1 2
+#define TRACK_NODE_ID_2 3 
 
+struct TrackerNode {
+    int nodeID;      // ID i look_up table
+    int i2cAddress;  // I2C adresse på stepper-controlleren
+};
+extern TrackerNode trackerNodes[];
 
 //Vores netværksparametre 
 struct Network_params
@@ -57,11 +62,13 @@ enum AntennaDir {
     DIR_RX_7,
 };
 AntennaDir get_antenna_dir(uint8_t tx_node_id);
+void set_switches(AntennaDir antenna_dir);
 struct Look_up{
     float latitude;
     float longitude;
     int32_t rssi;
     AntennaDir switchState; 
+    bool hasUpdate;
 } ;
 extern Look_up look_up[];
 
