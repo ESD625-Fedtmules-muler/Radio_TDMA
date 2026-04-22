@@ -6,13 +6,6 @@
 
 //til GPS.cpp
 void GPS_setup();
-struct GPSData 
-{
-    float latitude;
-    float longitude;
-    bool hasUpdate;
-};
-extern GPSData myGPS;
 
 #define GPS_PAKKE_SIZE 256
 extern uint8_t GPS_buffer[GPS_PAKKE_SIZE];
@@ -29,8 +22,18 @@ extern GPS_pakker gps_pakke;
 
 void decodeAndPrintGPSBuffer(const uint8_t* buffer, size_t length);
 
+struct Look_up{
+    float latitude;
+    float longitude;
+    int32_t rssi;
+    //AntennaDir switchState; 
+    //uint64_t time_stamp;
+    bool hasUpdate;
+} ;
+extern Look_up look_up[];
 
-
+void update_LookUp(uint8_t *data, size_t len);
+void printLookUpTable();
 
 
 

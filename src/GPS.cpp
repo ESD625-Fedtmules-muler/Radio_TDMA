@@ -7,17 +7,12 @@
 HardwareSerial gpsSerial(1); // Use UART1 for GPS communication
 TinyGPSPlus gps;
 
-#if NODE_ID == 1
-    GPSData myGPS = { 57.013928, 9.987330, false};
-#endif
-
-#if NODE_ID != 1   
-    GPSData myGPS = {0.0, 0.0, false};
-#endif
-
 uint8_t GPS_buffer[GPS_PAKKE_SIZE];
 size_t GPS_pakke_length = 0;
 volatile bool GPS_pakke_status = false;
+Look_up look_up[MAX_NODES];
+//SemaphoreHandle_t tableMutex; //Bruges ikke nu her, men tænkte vi skulle have mulighed for det
+
 
 void Task_GPS(void *pvParameter);
 void task_GPS_Packer(void *pvparameter);
@@ -31,6 +26,17 @@ void GPS_setup() {
     gpsSerial.write(resetConfig, sizeof(resetConfig));
 
     Serial.println("GPS serial initialized");
+
+    //Look-up laves her.
+    //tableMutex = xSemaphoreCreateMutex();    
+    for(int i = 0; i < network_params.number_of_nodes; i++) {
+        look_up[i].latitude = 0;
+        look_up[i].longitude = 0;
+        look_up[i].rssi = -100;
+        //look_up[i].switchState = ERROR; // Se med i næste afsnit...
+        look_up[i].hasUpdate = false;
+    }
+
 
     xTaskCreatePinnedToCore(
         Task_GPS,        // Task function
@@ -62,9 +68,9 @@ void Task_GPS(void *pvParameter) {
             //Serial.print(c);
             if (gps.encode(c)) { 
                 if (gps.location.isUpdated()) {
-                    myGPS.latitude = gps.location.lat();
-                    myGPS.longitude = gps.location.lng();
-                    myGPS.hasUpdate = true;
+                    look_up[NODE_ID].latitude = gps.location.lat();
+                    look_up[NODE_ID].longitude = gps.location.lng();
+                    look_up[NODE_ID].hasUpdate = true;
                 }
             }
         }
@@ -86,20 +92,19 @@ void task_GPS_Packer(void *pvparameter) {
         size_t offset = 0;
 
         //Tjekker om vores egne koordinater er blevet opdateret.
-        if (myGPS.hasUpdate) {
+        if (look_up[NODE_ID].hasUpdate) {
             gps_pakke.type = 1;
             gps_pakke.node_id = NODE_ID;
-            gps_pakke.latitude = myGPS.latitude;
-            gps_pakke.longitude = myGPS.longitude;
+            gps_pakke.latitude = look_up[NODE_ID].latitude;
+            gps_pakke.longitude = look_up[NODE_ID].longitude;
             //gps_pakke.RSSI = look_up[NODE_ID];
             memcpy(GPS_buffer + offset, &gps_pakke, sizeof(gps_pakke));
             offset += sizeof(gps_pakke);
-            myGPS.hasUpdate = false;
+            look_up[NODE_ID].hasUpdate = false;
         }
 
             //Tjekker om nogle af de andre noder er blevet opdateret
-/*         for (int i = 0; i < network_params.number_of_nodes; i++) {
-
+        for (int i = 0; i < network_params.number_of_nodes; i++) {
             if (i == NODE_ID){
                 continue;
             }
@@ -108,7 +113,7 @@ void task_GPS_Packer(void *pvparameter) {
                 gps_pakke.node_id = i;
                 gps_pakke.latitude = look_up[i].latitude;
                 gps_pakke.longitude = look_up[i].longitude;
-                gps_pakke.rssi = look_up[i].rssi;
+                //gps_pakke.rssi = look_up[i].rssi;
 
                 if (offset + sizeof(gps_pakke) > GPS_PAKKE_SIZE) {
                     break;
@@ -117,7 +122,7 @@ void task_GPS_Packer(void *pvparameter) {
                 offset += sizeof(gps_pakke);
                 look_up[i].hasUpdate = false;
             }
-        } */
+        }
         GPS_pakke_length = offset;
         GPS_pakke_status = (offset > 0);
 
@@ -125,6 +130,34 @@ void task_GPS_Packer(void *pvparameter) {
     }
 
 }  
+
+void update_LookUp(uint8_t *data, size_t len) {
+    size_t offset = 0;
+
+    while (offset + sizeof(GPS_pakker) <= len) {
+        GPS_pakker pkt;
+
+        memcpy(&pkt, data + offset, sizeof(GPS_pakker));
+        offset += sizeof(GPS_pakker);
+
+        // Tjek lige om det er en legit node
+        if (pkt.node_id >= network_params.number_of_nodes) {
+            continue;
+        }
+
+        if (pkt.type == 1) {
+            Serial.print("Trust this one: ");
+            Serial.println(pkt.node_id);
+        }
+        look_up[pkt.node_id].latitude = pkt.latitude;
+        look_up[pkt.node_id].longitude = pkt.longitude;
+        // look_up[pkt.node_id].rssi = pkt.rssi;
+        look_up[pkt.node_id].hasUpdate = true;
+
+
+
+    }
+}
 
 
 void decodeAndPrintGPSBuffer(const uint8_t* buffer, size_t length) { //Chatten har lige gjort det her.
@@ -149,4 +182,30 @@ void decodeAndPrintGPSBuffer(const uint8_t* buffer, size_t length) { //Chatten h
     }
 
     Serial.println("=== Slut ===");
+}
+
+void printLookUpTable() {
+    Serial.println("---- LOOK UP TABLE ----");
+
+    for (int i = 0; i < network_params.number_of_nodes; i++) {
+        Serial.print("Node ");
+        Serial.print(i);
+        if (i == NODE_ID) {
+           Serial.print("(ME)");
+        }
+        Serial.print(": ");
+
+        if (look_up[i].hasUpdate) {
+            Serial.print("Lat: ");
+            Serial.print(look_up[i].latitude, 6);
+            Serial.print(", Lon: ");
+            Serial.print(look_up[i].longitude, 6);
+            Serial.print(", RSSI: ");
+            Serial.println(look_up[i].rssi);
+        } else {
+            Serial.println("No data");
+        }
+    }
+
+    Serial.println("-----------------------");
 }
