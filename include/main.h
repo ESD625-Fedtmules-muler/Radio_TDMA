@@ -17,7 +17,7 @@ extern GPSData myGPS;
 #define GPS_PAKKE_SIZE 256
 extern uint8_t GPS_buffer[GPS_PAKKE_SIZE];
 extern size_t GPS_pakke_length;
-extern volatile bool GPS_pakkeReady;
+extern volatile bool GPS_pakke_status;
 struct GPS_pakker {
     uint8_t type;
     uint8_t node_id;

@@ -8,7 +8,7 @@ HardwareSerial gpsSerial(1); // Use UART1 for GPS communication
 TinyGPSPlus gps;
 
 #if NODE_ID == 1
-    GPSData myGPS = { 57.013928, 9.987330, true};
+    GPSData myGPS = { 57.013928, 9.987330, false};
 #endif
 
 #if NODE_ID != 1   
@@ -17,7 +17,7 @@ TinyGPSPlus gps;
 
 uint8_t GPS_buffer[GPS_PAKKE_SIZE];
 size_t GPS_pakke_length = 0;
-volatile bool GPS_pakkeReady = false;
+volatile bool GPS_pakke_status = false;
 
 void Task_GPS(void *pvParameter);
 void task_GPS_Packer(void *pvparameter);
@@ -59,6 +59,7 @@ void Task_GPS(void *pvParameter) {
     for(;;) {
         while (gpsSerial.available() > 0) {
             c = gpsSerial.read();
+            //Serial.print(c);
             if (gps.encode(c)) { 
                 if (gps.location.isUpdated()) {
                     myGPS.latitude = gps.location.lat();
@@ -76,8 +77,9 @@ void task_GPS_Packer(void *pvparameter) {
     GPS_pakker gps_pakke;
     for (;;) {
 
-        if (GPS_pakkeReady == true) {
+        if (GPS_pakke_status == true) {
             //Serial.print("Venter på at sende en GPS pakke");
+            vTaskDelay(pdMS_TO_TICKS(5));
             continue;
         }
         
@@ -117,7 +119,7 @@ void task_GPS_Packer(void *pvparameter) {
             }
         } */
         GPS_pakke_length = offset;
-        GPS_pakkeReady = (offset > 0);
+        GPS_pakke_status = (offset > 0);
 
         vTaskDelay(pdMS_TO_TICKS(100));
     }

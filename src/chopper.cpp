@@ -180,8 +180,8 @@ void task_chopper(void *pvParameters){
             header_content.number_of_frames = number_of_frames;
             header_content.tail_length      = tail_length;
             header_content.payload_crc = esp_rom_crc32_le(0, input_package.data, sizeof(input_package.length));
-            Serial.println("Constructing header");
-            Serial.println(header_content.payload_crc);
+            //Serial.println("Constructing header");
+            //Serial.println(header_content.payload_crc);
 
             header_content.enqueue(&tx_blockqueue);
 

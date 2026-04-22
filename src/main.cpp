@@ -9,14 +9,20 @@ void RX_interface(void *pvParameters){
     {
         delay(100);
     }
-
-    QueueHandle_t rx_queue = router_setup_listener(0x11, 10);
-
+    
+    #if NODE_ID == 1
+        QueueHandle_t rx_queue = router_setup_listener(0x10, 10);
+    #endif 
+    #if NODE_ID == 2
+        QueueHandle_t rx_queue = router_setup_listener(0x20, 10);
+    #endif
     while (true)
     {   
         network_package block;
         if(xQueueReceive(rx_queue, &block, portMAX_DELAY) == pdTRUE){
-            block.debug_msg();
+            //Serial.println("GOT Something");
+            //block.debug_msg();
+            decodeAndPrintGPSBuffer(block.payload.data, block.payload.len);
         }
     }
 }
@@ -35,7 +41,7 @@ void setup() {
     setup_router();
     GPS_setup();
 
-    //xTaskCreate(RX_interface, "RX_interface", 4096, NULL, 2, NULL);
+    xTaskCreate(RX_interface, "RX_interface", 4096, NULL, 2, NULL);
     Serial.println("All good");
 
     while (network_params.ready != true)
@@ -47,12 +53,21 @@ void setup() {
 
 void loop() {
 
-    if (GPS_pakkeReady) {
-        Serial.println("Ny gps pakke!");
-        decodeAndPrintGPSBuffer(GPS_buffer, GPS_pakke_length);
+    if (GPS_pakke_status) {
+        //Serial.println("Ny gps pakke!");
+        //decodeAndPrintGPSBuffer(GPS_buffer, GPS_pakke_length);
+
+        #if NODE_ID == 1
+            router_send_data(0x20, 0x10, (uint8_t*)GPS_buffer, GPS_pakke_length);
+            //Serial.print("Sending packet");
+
+        #endif
+        #if NODE_ID == 2
+            router_send_data(0x10, 0x20, (uint8_t*)GPS_buffer, GPS_pakke_length);
+        #endif
+    
     }
-    //router_send_data(0x69, 0x42, (uint8_t*)buf, sizeof(buf));
-    //Serial.print("Sending packet");
+
     delay(6000);
 }
 
