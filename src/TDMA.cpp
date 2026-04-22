@@ -44,8 +44,8 @@ void TDMA_setup(uint8_t my_id) {
 
     pinMode(GPIO_3, OUTPUT);
     //Til GPS.
-    pinMode(PIN_PPS, INPUT_PULLUP);
-    attachInterrupt(PIN_PPS, pps_isr, FALLING);
+    pinMode(PIN_GPS_PPS, INPUT_PULLUP);
+    attachInterrupt(PIN_GPS_PPS, pps_isr, FALLING);
 
     //Timer setup
     t_slot = 250000 / network_params.number_of_nodes;
@@ -117,9 +117,7 @@ void Task_TDMA(void *pvParameters) {
                 {
                     block_item buf;
                     if(xQueueReceive(tx_blockqueue, &buf, 0) == pdTRUE){ //There is something we need to transmit
-                        digitalWrite(PIN_SCL, HIGH);
                         radio.write(buf.block_payload, 32);
-                        digitalWrite(PIN_SCL, LOW);
                     }
                 }
                 modem_rx();

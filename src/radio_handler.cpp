@@ -6,7 +6,7 @@
 #include <ESP32-c3_pinout.h>
 #include <main.h>
 
-RF24 radio(PIN_CE, PIN_CSN);
+RF24 radio(PIN_RF_CE, PIN_RF_CSN);
 
 
 
@@ -24,7 +24,7 @@ bool Assert_setting(bool result, const char* msg){
 
 
 void setup_modem(rf24_pa_dbm_e power_level){
-  SPI.begin(PIN_SCK, PIN_MISO, PIN_MOSI);
+  SPI.begin(PIN_RF_SCK, PIN_RF_MISO, PIN_RF_MOSI);
   SPI.setFrequency(8000000);
   
   Assert_setting(radio.begin(&SPI), "Setting up modem (trust this one)");
@@ -37,8 +37,8 @@ void setup_modem(rf24_pa_dbm_e power_level){
   radio.setChannel(network_params.channel); //Vi bruger channel 10
   radio.openWritingPipe(network_params.pipe_name);
   radio.openReadingPipe(0, network_params.pipe_name);
-  pinMode(PIN_SDA, OUTPUT);
-  pinMode(PIN_SCL, OUTPUT);
+  //pinMode(PIN_SDA, OUTPUT);
+  //pinMode(PIN_SCL, OUTPUT);
 }
 
 
