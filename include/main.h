@@ -38,7 +38,7 @@ void decodeAndPrintGPSBuffer(const uint8_t* buffer, size_t length);
 struct Network_params
 {
     uint8_t TTL = 6;
-    uint8_t channel = 90; //Ca. i MHz, så 90 => 2.490 GHz
+    uint8_t channel = 100; //Ca. i MHz, så 90 => 2.490 GHz
     rf24_datarate_e bitRate = RF24_1MBPS;
     uint8_t number_of_nodes = MAX_NODES;
     uint8_t node_id = 0;

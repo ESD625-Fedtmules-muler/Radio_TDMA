@@ -4,6 +4,9 @@
 #include <Arduino.h>
 
 
+
+//* Pins for RF modems SPI
+
 #define PIN_RF_CSN      18
 #define PIN_RF_MOSI     3
 #define PIN_RF_MISO     0
@@ -15,7 +18,6 @@
 #define PIN_GPS_RX      5
 #define PIN_I2C_SDA     7
 #define PIN_I2C_SCL     8
-
 
 
 //!Wtf dude

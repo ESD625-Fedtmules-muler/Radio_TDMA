@@ -28,8 +28,6 @@ uint32_t t_slot;
 
 
 
-
-
 void TDMA_setup(uint8_t my_id) {
 
     //De 2 queues vi stabler blocks i.
@@ -41,8 +39,6 @@ void TDMA_setup(uint8_t my_id) {
         rx_blockqueue[i] = xQueueCreate(TX_queue_size, sizeof(block_item));
     }
 
-
-    pinMode(GPIO_3, OUTPUT);
     //Til GPS.
     pinMode(PIN_GPS_PPS, INPUT_PULLUP);
     attachInterrupt(PIN_GPS_PPS, pps_isr, FALLING);
@@ -68,7 +64,8 @@ void TDMA_setup(uint8_t my_id) {
     0                 // Core ID (0 or 1)
     );
     network_params.ready = true; //Sets the global flag to true. so we know we can use
-    
+    //pinMode(PIN_SDA, OUTPUT);
+    //pinMode(PIN_SCL, OUTPUT);
 };
 
 // Interrupt til når der kommer pps
@@ -125,12 +122,15 @@ void Task_TDMA(void *pvParameters) {
             else {
                 uint32_t t_start = micros(); //Husker vores starttidspunkt.
                 //TODO Over i Radio TX
+                
                 while ((micros() - t_start) < (t_slot - t_margin)) //Så længde vi måe slås med radioen.
                 {
                     if(radio.available()){
                         block_item buf;
                         radio.read(buf.block_payload, 32);
                         buf.ID = Tx_node;
+                        Serial.println(".");
+                        //buf.print_payload();
                         xQueueSend(rx_blockqueue[Tx_node], &buf, 0); //Sends the block through the queueeueue.
                     }
                 }
@@ -141,6 +141,4 @@ void Task_TDMA(void *pvParameters) {
         }
     }
 };
-
-
 

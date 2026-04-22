@@ -16,7 +16,6 @@ void RX_interface(void *pvParameters){
     {   
         network_package block;
         if(xQueueReceive(rx_queue, &block, portMAX_DELAY) == pdTRUE){
-            Serial.print("GOT SOMETHING:");
             block.debug_msg();
         }
     }

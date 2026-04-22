@@ -46,10 +46,10 @@ void setup_modem(rf24_pa_dbm_e power_level){
   radio.setAutoAck(false); //SLår auto acks fra  i modtager
   radio.setPALevel(power_level, true); //max transmit power 
   radio.setChannel(network_params.channel); //Vi bruger channel 10
+  radio.disableCRC();
   radio.openWritingPipe(network_params.pipe_name);
   radio.openReadingPipe(0, network_params.pipe_name);
-  //pinMode(PIN_SDA, OUTPUT);
-  //pinMode(PIN_SCL, OUTPUT);
+
 }
 
 
