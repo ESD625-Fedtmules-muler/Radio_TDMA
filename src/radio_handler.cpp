@@ -30,6 +30,17 @@ void setup_modem(rf24_pa_dbm_e power_level){
   Assert_setting(radio.begin(&SPI), "Setting up modem (trust this one)");
   Assert_setting(radio.isChipConnected(), "Chip connected (dont trust this one too much)");
   
+  if(radio.isPVariant()){
+    Serial.println("CHIP is NRF24L01+");
+  } else{
+    Serial.println("CHIP is NRF24L01");
+  }
+  radio.powerDown();
+  delay(1);
+  
+  radio.powerUp();
+  delay(1);
+
   radio.disableAckPayload(); //SLår acks fra
   radio.setDataRate(network_params.bitRate); //1 MBITS / S 
   radio.setAutoAck(false); //SLår auto acks fra  i modtager

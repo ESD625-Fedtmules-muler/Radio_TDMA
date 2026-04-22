@@ -14,7 +14,20 @@ struct GPSData
 };
 extern GPSData myGPS;
 
+#define GPS_PAKKE_SIZE 256
+extern uint8_t GPS_buffer[GPS_PAKKE_SIZE];
+extern size_t GPS_pakke_length;
+extern volatile bool GPS_pakkeReady;
+struct GPS_pakker {
+    uint8_t type;
+    uint8_t node_id;
+    float latitude;
+    float longitude;
+    float RSSI; //! OBS. RSSI type
+};
+extern GPS_pakker gps_pakke;
 
+void decodeAndPrintGPSBuffer(const uint8_t* buffer, size_t length);
 
 
 

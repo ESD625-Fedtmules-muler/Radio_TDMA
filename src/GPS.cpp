@@ -15,7 +15,12 @@ TinyGPSPlus gps;
     GPSData myGPS = {0.0, 0.0, false};
 #endif
 
+uint8_t GPS_buffer[GPS_PAKKE_SIZE];
+size_t GPS_pakke_length = 0;
+volatile bool GPS_pakkeReady = false;
+
 void Task_GPS(void *pvParameter);
+void task_GPS_Packer(void *pvparameter);
 
 void GPS_setup() {
     
@@ -28,13 +33,23 @@ void GPS_setup() {
     Serial.println("GPS serial initialized");
 
     xTaskCreatePinnedToCore(
-    Task_GPS,        // Task function
-    "GPS_Data",     // Name
-    4096,             // Stack size
-    NULL,             // Parameters
-    5,                // Priority
-    NULL,             // Task handle
-    0                 // Core ID (0 or 1)
+        Task_GPS,        // Task function
+        "GPS_Data",     // Name
+        4096,             // Stack size
+        NULL,             // Parameters
+        5,                // Priority
+        NULL,             // Task handle
+        0                 // Core ID (0 or 1)
+    );
+
+    xTaskCreatePinnedToCore(
+        task_GPS_Packer,        // Task function
+        "GPS_pakker",     // Name
+        4096,             // Stack size
+        NULL,             // Parameters
+        5,                // Priority
+        NULL,             // Task handle
+        0                 // Core ID (0 or 1)
     );
 };
 
@@ -52,6 +67,84 @@ void Task_GPS(void *pvParameter) {
                 }
             }
         }
-        vTaskDelay(pdMS_TO_TICKS(100)); 
+        vTaskDelay(pdMS_TO_TICKS(200)); 
     }
+}
+
+
+void task_GPS_Packer(void *pvparameter) {
+    GPS_pakker gps_pakke;
+    for (;;) {
+
+        if (GPS_pakkeReady == true) {
+            //Serial.print("Venter på at sende en GPS pakke");
+            continue;
+        }
+        
+        size_t offset = 0;
+
+        //Tjekker om vores egne koordinater er blevet opdateret.
+        if (myGPS.hasUpdate) {
+            gps_pakke.type = 1;
+            gps_pakke.node_id = NODE_ID;
+            gps_pakke.latitude = myGPS.latitude;
+            gps_pakke.longitude = myGPS.longitude;
+            //gps_pakke.RSSI = look_up[NODE_ID];
+            memcpy(GPS_buffer + offset, &gps_pakke, sizeof(gps_pakke));
+            offset += sizeof(gps_pakke);
+            myGPS.hasUpdate = false;
+        }
+
+            //Tjekker om nogle af de andre noder er blevet opdateret
+/*         for (int i = 0; i < network_params.number_of_nodes; i++) {
+
+            if (i == NODE_ID){
+                continue;
+            }
+            if (look_up[i].hasUpdate){
+                gps_pakke.type = 2;
+                gps_pakke.node_id = i;
+                gps_pakke.latitude = look_up[i].latitude;
+                gps_pakke.longitude = look_up[i].longitude;
+                gps_pakke.rssi = look_up[i].rssi;
+
+                if (offset + sizeof(gps_pakke) > GPS_PAKKE_SIZE) {
+                    break;
+                }
+                memcpy(GPS_buffer + offset, &gps_pakke, sizeof(gps_pakke));
+                offset += sizeof(gps_pakke);
+                look_up[i].hasUpdate = false;
+            }
+        } */
+        GPS_pakke_length = offset;
+        GPS_pakkeReady = (offset > 0);
+
+        vTaskDelay(pdMS_TO_TICKS(100));
+    }
+
+}  
+
+
+void decodeAndPrintGPSBuffer(const uint8_t* buffer, size_t length) { //Chatten har lige gjort det her.
+
+    Serial.println("=== Decode GPS Buffer ===");
+
+    size_t offset = 0;
+
+    while (offset + sizeof(GPS_pakker) <= length) {
+
+        const GPS_pakker* pkt = (const GPS_pakker*)(buffer + offset);
+
+        Serial.println("---- GPS Pakke ----");
+        Serial.print("Type: "); Serial.println(pkt->type);
+        Serial.print("Node ID: "); Serial.println(pkt->node_id);
+        Serial.print("Latitude: "); Serial.println(pkt->latitude, 6);
+        Serial.print("Longitude: "); Serial.println(pkt->longitude, 6);
+        Serial.print("RSSI: "); Serial.println(pkt->RSSI);
+        Serial.println("-------------------");
+
+        offset += sizeof(GPS_pakker);
+    }
+
+    Serial.println("=== Slut ===");
 }
