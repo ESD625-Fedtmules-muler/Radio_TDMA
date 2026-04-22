@@ -38,6 +38,7 @@ void setup() {
     TDMA_setup(NODE_ID);
     setup_chopper();
     setup_router();
+    GPS_setup();
 
     xTaskCreate(RX_interface, "RX_interface", 4096, NULL, 2, NULL);
     Serial.println("All good");

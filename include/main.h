@@ -2,6 +2,25 @@
 #include <RF24.h>
 
 #define MAX_NODES 10
+
+
+//til GPS.cpp
+void GPS_setup();
+struct GPSData 
+{
+    float latitude;
+    float longitude;
+    bool hasUpdate;
+};
+extern GPSData myGPS;
+
+
+
+
+
+
+
+
 //Vores netværksparametre 
 struct Network_params
 {
