@@ -32,10 +32,10 @@ void RX_interface(void *pvParameters){
     {   
         network_package block;
         if(xQueueReceive(rx_queue, &block, portMAX_DELAY) == pdTRUE){
-            //Serial.println("GOT Something");
-            //block.debug_msg();
+            Serial.println("GOT Something");
+            block.debug_msg();
             //decodeAndPrintGPSBuffer(block.payload.data, block.payload.len);
-            update_LookUp(block.payload.data, block.payload.len);
+            //update_LookUp(block.payload.data, block.payload.len);
         }
     }
 }
@@ -47,7 +47,9 @@ void RX_interface(void *pvParameters){
 
 void setup() {
     Serial.begin(115200);
-
+    pinMode(PIN_RF_LR1121_CSN, OUTPUT);
+    digitalWrite(PIN_RF_LR1121_CSN, HIGH);
+    
     setup_modem(RF24_PA_MAX);
     TDMA_setup(NODE_ID);
     setup_chopper();
@@ -69,6 +71,8 @@ void setup() {
 
 void loop() {
 
+    char buf[] = "Axel siger hej.";
+    router_send_data(0x20, 0x10, (uint8_t*)buf, sizeof(buf));
 
     delay(6000);
 }

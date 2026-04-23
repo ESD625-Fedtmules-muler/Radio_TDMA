@@ -30,7 +30,7 @@ void set_switches(AntennaDir antenna_dir) {
     };
 
     byte value = antennaValues[antenna_dir];
-    digitalWrite(PIN_SR_DAT, LOW);
+    digitalWrite(PIN_SR_STR, LOW);
     shiftOut(PIN_SR_DAT, PIN_SR_CLK, MSBFIRST, value);
-    digitalWrite(PIN_SR_DAT, HIGH); 
+    digitalWrite(PIN_SR_STR, HIGH); 
 }
