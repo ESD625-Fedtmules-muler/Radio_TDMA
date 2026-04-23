@@ -3,7 +3,7 @@
 #include <Arduino.h>
 #include <switches.h>
 
-
+#ifndef DUMMY_RADIO 
 void setup_RF_switches(){
     pinMode(PIN_SR_CLK, OUTPUT);
     pinMode(PIN_SR_DAT, OUTPUT);
@@ -34,3 +34,5 @@ void set_switches(AntennaDir antenna_dir) {
     shiftOut(PIN_SR_DAT, PIN_SR_CLK, MSBFIRST, value);
     digitalWrite(PIN_SR_STR, HIGH); 
 }
+
+#endif

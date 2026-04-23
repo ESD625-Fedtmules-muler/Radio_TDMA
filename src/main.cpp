@@ -36,6 +36,7 @@ void RX_interface(void *pvParameters){
             //block.debug_msg();
             //decodeAndPrintGPSBuffer(block.payload.data, block.payload.len);
             update_LookUp(block.payload.data, block.payload.len);
+            update_LookUp(block.payload.data, block.payload.len);
         }
     }
 }
@@ -47,9 +48,10 @@ void RX_interface(void *pvParameters){
 
 void setup() {
     Serial.begin(115200);
+#ifndef DUMMY_RADIO
     pinMode(PIN_RF_LR1121_CSN, OUTPUT);
     digitalWrite(PIN_RF_LR1121_CSN, HIGH);
-    
+#endif
     setup_modem(RF24_PA_MAX);
     TDMA_setup(NODE_ID);
     setup_chopper();
@@ -64,6 +66,7 @@ void setup() {
         delay(10);
     }
 
+    
     //xTaskCreate(task_debug_serial, "Python_Interface", 4096, NULL, 2, NULL);
 
 }
@@ -71,19 +74,22 @@ void setup() {
 
 void loop() {
 
+    char buf[] = "Axel siger hej.";
+    
     if (GPS_pakke_status) {
-            
-            #if NODE_ID == 1
-                router_send_data(0x20, 0x10, (uint8_t*)GPS_buffer, GPS_pakke_length);
-                GPS_pakke_status = false;
-            #endif
-            #if NODE_ID == 2
-                router_send_data(0x10, 0x20, (uint8_t*)GPS_buffer, GPS_pakke_length);
-                GPS_pakke_status = false;
-            #endif
+        
+        #if NODE_ID == 1
+            router_send_data(0x20, 0x10, (uint8_t*)GPS_buffer, GPS_pakke_length);
+            GPS_pakke_status = false;
+        #endif
+        #if NODE_ID == 2
+            router_send_data(0x10, 0x20, (uint8_t*)GPS_buffer, GPS_pakke_length);
+            GPS_pakke_status = false;
+        #endif
+    
     }
-    printLookUpTable();
-
+    
+    //router_send_data(0x10, 0x20, (uint8_t*)buf, sizeof(buf));
     delay(6000);
 }
 
@@ -102,15 +108,4 @@ void loop() {
 
 
 
-    if (GPS_pakke_status) {
-        
-        #if NODE_ID == 1
-            router_send_data(0x20, 0x10, (uint8_t*)GPS_buffer, GPS_pakke_length);
-            GPS_pakke_status = false;
-        #endif
-        #if NODE_ID == 2
-            router_send_data(0x10, 0x20, (uint8_t*)GPS_buffer, GPS_pakke_length);
-            GPS_pakke_status = false;
-        #endif
-    
-    } */
+     */
