@@ -1,24 +1,215 @@
 #include <SPI.h>
 #include <Arduino.h>
 #include <ESP32-c3_pinout.h>
-#include <main.h>
+#include <network_params.h>
 #include <TinyGPSPlus.h>
+#include <gps.h>
+#include <router.h>
+
 
 HardwareSerial gpsSerial(1); // Use UART1 for GPS communication
 TinyGPSPlus gps;
 
-uint8_t GPS_buffer[GPS_PAKKE_SIZE];
-size_t GPS_pakke_length = 0;
-volatile bool GPS_pakke_status = false;
-Look_up look_up[MAX_NODES];
-//SemaphoreHandle_t tableMutex; //Bruges ikke nu her, men tænkte vi skulle have mulighed for det
 
 
-void Task_GPS(void *pvParameter);
-void task_GPS_Packer(void *pvparameter);
+
+
+struct Channel_state_table{
+    Look_up_entry entries[MAX_NODES];
+    SemaphoreHandle_t table_mutex = NULL;
+
+    void update_entry(size_t ID, float lat, float lng){
+        
+        entries[ID].latitude = gps.location.lat();
+        entries[ID].longitude = gps.location.lng();
+        entries[ID].hasUpdate = true;
+    }
+
+    void begin(){
+        table_mutex = xSemaphoreCreateMutex();
+        for(int i = 0; i < network_params.number_of_nodes; i++) {
+            entries[i].ID = i;
+            entries[i].latitude = 0;
+            entries[i].longitude = 0;
+            entries[i].rssi = -100;
+            //look_up[i].switchState = ERROR; // Se med i næste afsnit...
+            entries[i].lifetime = -1;
+            entries[i].hasUpdate = false;
+        }
+    }
+
+    /// @brief Runs through the entry table to find the number of known positions
+    /// @return Returns the number of known positions including your own.... If you know that one of course O_o 
+    uint8_t get_known_positions(){
+        int i = 0;
+        for (size_t i = 0; i < MAX_NODES; i++)
+        {
+            if(entries[i].lifetime > 0){
+                i++;
+            }
+        }
+        return i;
+    }
+
+
+    uint16_t serialize(uint8_t *data, size_t len){
+        if(!xSemaphoreTake(table_mutex, portMAX_DELAY)){
+            return 0;
+        }
+        size_t offset = 0;
+        uint8_t num_entries = get_known_positions();
+        data[0] = num_entries;
+        offset++;
+        for (size_t i = 0; i < MAX_NODES; i++)
+        {
+            if(entries[i].lifetime > 0){
+                if(offset + sizeof(Look_up_entry) > len){
+                    return offset; 
+                }
+                memcpy(data + offset, &entries[i], sizeof(Look_up_entry));
+                offset += sizeof(Look_up_entry);
+            }
+        }
+        xSemaphoreGive(table_mutex);
+        return offset;
+    };
+
+    bool evaluate_packet(uint8_t *data, size_t len){
+        if(!xSemaphoreTake(table_mutex, portMAX_DELAY)){
+            return false;
+        }
+        uint16_t num_entries = data[0];
+        uint16_t offset = 1;
+
+
+        for (size_t i = 0; i < num_entries; i++)
+        {
+            Look_up_entry incoming;
+            memcpy(data + offset, &incoming, sizeof(Look_up_entry));
+            if(entries[incoming.ID].lifetime > incoming.lifetime){
+                memcpy(&entries[incoming.ID], &incoming, sizeof(incoming));
+            }
+        }
+
+        xSemaphoreGive(table_mutex);
+        return true;
+    }
+
+    //Updates the lifetime in seconds
+    void update_life_times(int8_t delta_time){
+        for (size_t i = 0; i < MAX_NODES; i++)
+        {
+            if(entries[i].lifetime > 0){
+                entries[i].lifetime += delta_time;
+            }
+            if(entries[i].lifetime > network_params.pos_timeout){
+                entries[i].lifetime = -1;
+            }
+        }
+    }
+
+    void printLookUpTable() {
+        Serial.println("---- LOOK UP TABLE ----");
+        for (int i = 0; i < network_params.number_of_nodes; i++) {
+            Serial.print("Node ");
+            Serial.print(i);
+            if (i == NODE_ID) {
+            Serial.print("(ME)");
+            }
+            Serial.print(": ");
+
+            if (entries[i].latitude > 0) {
+                Serial.print("Lat: ");
+                Serial.print(entries[i].latitude, 6);
+                Serial.print(", Lon: ");
+                Serial.print(entries[i].longitude, 6);
+                Serial.print(", RSSI: ");
+                Serial.println(entries[i].rssi);
+            } else {
+                Serial.println("No data");
+            }
+        }
+        Serial.println("-----------------------");
+    }
+};
+
+
+
+
+
+Channel_state_table channel_state_table;
+
+
+
+void Task_GPS_rx(void *pvParameter) {
+    char c;
+    while (network_params.ready != true)
+    {
+        delay(100);
+    }
+
+    QueueHandle_t gps_rx_queue = router_setup_listener(network_params.GPS_IP, 10);
+    
+    
+    for(;;) {
+        while (gpsSerial.available() > 0) {
+            c = gpsSerial.read();
+            //Serial.print(c);
+            if (gps.encode(c)) { 
+                if (gps.location.isUpdated()) {
+                    channel_state_table.update_entry(NODE_ID, gps.location.lat(), gps.location.lng());
+                }
+            }
+        }
+        
+        network_package block;
+        if(xQueueReceive(gps_rx_queue, &block, pdMS_TO_TICKS(100)) == pdTRUE){
+            
+            
+        }        
+
+
+    }
+}
+
+
+
+
+
+
+
+/// @brief Task in charge of once every second updating lifetimes, and updating most adequate switches.
+/// @param pvParameter 
+void task_GPS_runner(void *pvparameter) {
+
+    uint32_t period = 1000; //tid i millisekunder
+    uint32_t periods_between_beacons = 10;
+    TickType_t xLastWakeTime = xTaskGetTickCount();
+    
+    int i = 0;
+    for (;;) {
+        channel_state_table.update_life_times(period/1000);
+        i += i % periods_between_beacons;
+
+
+        if(i==0){ //Every once in a while blast out some GPS coords...
+            uint8_t buf[512] = {0};
+            uint16_t len = channel_state_table.serialize(buf, sizeof(buf));
+            router_send_data(network_params.GPS_IP, NODE_ID, buf, len);
+        }
+        
+        vTaskDelayUntil( &xLastWakeTime, pdMS_TO_TICKS(period));
+    }
+
+}  
+
+
+
+
+
+
 
 void GPS_setup() {
-    
     // Det reset skal sendes til nogle af dem, for at sikre at GPS'en sender mere end bare GPGLL (For at tinyGPS virker)
     byte resetConfig[] = {0xB5, 0x62, 0x06, 0x09, 0x0D, 0x00, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0x00, 0x00, 0x01, 0x19, 0x98};
     gpsSerial.begin(9600, SERIAL_8N1, PIN_GPS_RX, PIN_GPS_TX);
@@ -29,18 +220,12 @@ void GPS_setup() {
 
     //Look-up laves her.
     //tableMutex = xSemaphoreCreateMutex();    
-    for(int i = 0; i < network_params.number_of_nodes; i++) {
-        look_up[i].latitude = 0;
-        look_up[i].longitude = 0;
-        look_up[i].rssi = -100;
-        //look_up[i].switchState = ERROR; // Se med i næste afsnit...
-        look_up[i].hasUpdate = false;
-    }
+    channel_state_table.begin();
 
 
     xTaskCreatePinnedToCore(
-        Task_GPS,        // Task function
-        "GPS_Data",     // Name
+        Task_GPS_rx,        // Task function
+        "GPS_rx",     // Name
         4096,             // Stack size
         NULL,             // Parameters
         5,                // Priority
@@ -49,8 +234,8 @@ void GPS_setup() {
     );
 
     xTaskCreatePinnedToCore(
-        task_GPS_Packer,        // Task function
-        "GPS_pakker",     // Name
+        task_GPS_runner,        // Task function
+        "GPS_runner",     // Name
         4096,             // Stack size
         NULL,             // Parameters
         5,                // Priority
@@ -58,128 +243,3 @@ void GPS_setup() {
         0                 // Core ID (0 or 1)
     );
 };
-
-
-void Task_GPS(void *pvParameter) {
-    char c;
-    for(;;) {
-        while (gpsSerial.available() > 0) {
-            c = gpsSerial.read();
-            //Serial.print(c);
-            if (gps.encode(c)) { 
-                if (gps.location.isUpdated()) {
-                    look_up[NODE_ID].latitude = gps.location.lat();
-                    look_up[NODE_ID].longitude = gps.location.lng();
-                    look_up[NODE_ID].hasUpdate = true;
-                }
-            }
-        }
-        vTaskDelay(pdMS_TO_TICKS(200)); 
-    }
-}
-
-void task_GPS_Packer(void *pvparameter) {
-    GPS_pakker gps_pakke;
-    for (;;) {
-
-        if (GPS_pakke_status == true) {
-            //Serial.print("Venter på at sende en GPS pakke");
-            vTaskDelay(pdMS_TO_TICKS(5));
-            continue;
-        }
-        
-        size_t offset = 0;
-
-        //Tjekker om vores egne koordinater er blevet opdateret.
-        if (look_up[NODE_ID].hasUpdate) {
-            gps_pakke.type = 1;
-            gps_pakke.node_id = NODE_ID;
-            gps_pakke.latitude = look_up[NODE_ID].latitude;
-            gps_pakke.longitude = look_up[NODE_ID].longitude;
-            //gps_pakke.RSSI = look_up[NODE_ID];
-            memcpy(GPS_buffer + offset, &gps_pakke, sizeof(gps_pakke));
-            offset += sizeof(gps_pakke);
-            look_up[NODE_ID].hasUpdate = false;
-        }
-
-            //Tjekker om nogle af de andre noder er blevet opdateret
-        for (int i = 0; i < network_params.number_of_nodes; i++) {
-            if (i == NODE_ID){
-                continue;
-            }
-            if (look_up[i].hasUpdate){
-                gps_pakke.type = 2;
-                gps_pakke.node_id = i;
-                gps_pakke.latitude = look_up[i].latitude;
-                gps_pakke.longitude = look_up[i].longitude;
-                //gps_pakke.rssi = look_up[i].rssi;
-
-                if (offset + sizeof(gps_pakke) > GPS_PAKKE_SIZE) {
-                    break;
-                }
-                memcpy(GPS_buffer + offset, &gps_pakke, sizeof(gps_pakke));
-                offset += sizeof(gps_pakke);
-                look_up[i].hasUpdate = false;
-            }
-        }
-        GPS_pakke_length = offset;
-        GPS_pakke_status = (offset > 0);
-
-        vTaskDelay(pdMS_TO_TICKS(100));
-    }
-
-}  
-
-void update_LookUp(uint8_t *data, size_t len) {
-    size_t offset = 0;
-
-    while (offset + sizeof(GPS_pakker) <= len) {
-        GPS_pakker pkt;
-
-        memcpy(&pkt, data + offset, sizeof(GPS_pakker));
-        offset += sizeof(GPS_pakker);
-
-        // Tjek lige om det er en legit node
-        if (pkt.node_id >= network_params.number_of_nodes) {
-            continue;
-        }
-
-        if (pkt.type == 1) {
-            //Serial.print("Trust this one: ");
-            //Serial.println(pkt.node_id);
-        }
-        look_up[pkt.node_id].latitude = pkt.latitude;
-        look_up[pkt.node_id].longitude = pkt.longitude;
-        // look_up[pkt.node_id].rssi = pkt.rssi;
-        look_up[pkt.node_id].hasUpdate = true;
-
-
-
-    }
-}
-
-void printLookUpTable() {
-    Serial.println("---- LOOK UP TABLE ----");
-
-    for (int i = 0; i < network_params.number_of_nodes; i++) {
-        Serial.print("Node ");
-        Serial.print(i);
-        if (i == NODE_ID) {
-           Serial.print("(ME)");
-        }
-        Serial.print(": ");
-
-        if (look_up[i].latitude > 0) {
-            Serial.print("Lat: ");
-            Serial.print(look_up[i].latitude, 6);
-            Serial.print(", Lon: ");
-            Serial.print(look_up[i].longitude, 6);
-            Serial.print(", RSSI: ");
-            Serial.println(look_up[i].rssi);
-        } else {
-            Serial.println("No data");
-        }
-    }
-
-    Serial.println("-----------------------");
-}
