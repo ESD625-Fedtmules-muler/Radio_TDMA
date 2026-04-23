@@ -33,9 +33,9 @@ void RX_interface(void *pvParameters){
         network_package block;
         if(xQueueReceive(rx_queue, &block, portMAX_DELAY) == pdTRUE){
             Serial.println("GOT Something");
-            block.debug_msg();
+            //block.debug_msg();
             //decodeAndPrintGPSBuffer(block.payload.data, block.payload.len);
-            //update_LookUp(block.payload.data, block.payload.len);
+            update_LookUp(block.payload.data, block.payload.len);
         }
     }
 }
@@ -71,8 +71,18 @@ void setup() {
 
 void loop() {
 
-    char buf[] = "Axel siger hej.";
-    router_send_data(0x20, 0x10, (uint8_t*)buf, sizeof(buf));
+    if (GPS_pakke_status) {
+            
+            #if NODE_ID == 1
+                router_send_data(0x20, 0x10, (uint8_t*)GPS_buffer, GPS_pakke_length);
+                GPS_pakke_status = false;
+            #endif
+            #if NODE_ID == 2
+                router_send_data(0x10, 0x20, (uint8_t*)GPS_buffer, GPS_pakke_length);
+                GPS_pakke_status = false;
+            #endif
+    }
+    printLookUpTable();
 
     delay(6000);
 }
