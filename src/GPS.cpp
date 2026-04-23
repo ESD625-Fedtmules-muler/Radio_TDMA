@@ -78,7 +78,6 @@ void Task_GPS(void *pvParameter) {
     }
 }
 
-
 void task_GPS_Packer(void *pvparameter) {
     GPS_pakker gps_pakke;
     for (;;) {
@@ -146,8 +145,8 @@ void update_LookUp(uint8_t *data, size_t len) {
         }
 
         if (pkt.type == 1) {
-            Serial.print("Trust this one: ");
-            Serial.println(pkt.node_id);
+            //Serial.print("Trust this one: ");
+            //Serial.println(pkt.node_id);
         }
         look_up[pkt.node_id].latitude = pkt.latitude;
         look_up[pkt.node_id].longitude = pkt.longitude;
@@ -157,31 +156,6 @@ void update_LookUp(uint8_t *data, size_t len) {
 
 
     }
-}
-
-
-void decodeAndPrintGPSBuffer(const uint8_t* buffer, size_t length) { //Chatten har lige gjort det her.
-
-    Serial.println("=== Decode GPS Buffer ===");
-
-    size_t offset = 0;
-
-    while (offset + sizeof(GPS_pakker) <= length) {
-
-        const GPS_pakker* pkt = (const GPS_pakker*)(buffer + offset);
-
-        Serial.println("---- GPS Pakke ----");
-        Serial.print("Type: "); Serial.println(pkt->type);
-        Serial.print("Node ID: "); Serial.println(pkt->node_id);
-        Serial.print("Latitude: "); Serial.println(pkt->latitude, 6);
-        Serial.print("Longitude: "); Serial.println(pkt->longitude, 6);
-        Serial.print("RSSI: "); Serial.println(pkt->RSSI);
-        Serial.println("-------------------");
-
-        offset += sizeof(GPS_pakker);
-    }
-
-    Serial.println("=== Slut ===");
 }
 
 void printLookUpTable() {
@@ -195,7 +169,7 @@ void printLookUpTable() {
         }
         Serial.print(": ");
 
-        if (look_up[i].hasUpdate) {
+        if (look_up[i].latitude > 0) {
             Serial.print("Lat: ");
             Serial.print(look_up[i].latitude, 6);
             Serial.print(", Lon: ");

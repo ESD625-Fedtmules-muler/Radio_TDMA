@@ -3,7 +3,7 @@
 
 #define MAX_NODES 10
 
-
+void sendLookUpToSerial(void);
 //til GPS.cpp
 void GPS_setup();
 
@@ -20,8 +20,6 @@ struct GPS_pakker {
 };
 extern GPS_pakker gps_pakke;
 
-void decodeAndPrintGPSBuffer(const uint8_t* buffer, size_t length);
-
 struct Look_up{
     float latitude;
     float longitude;
@@ -36,6 +34,8 @@ void update_LookUp(uint8_t *data, size_t len);
 void printLookUpTable();
 
 
+
+void setup_testcarrier(rf24_pa_dbm_e level, uint8_t channel);
 
 //Vores netværksparametre 
 struct Network_params

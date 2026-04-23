@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include "ESP32-c3_pinout.h"
 #include "main.h"
+#include <switches.h>
 
 Network_params network_params;
 
@@ -42,6 +43,12 @@ void TDMA_setup(uint8_t my_id) {
     //Til GPS.
     pinMode(PIN_GPS_PPS, INPUT_PULLUP);
     attachInterrupt(PIN_GPS_PPS, pps_isr, FALLING);
+
+
+#ifndef DUMMY_RADIO
+    setup_RF_switches();
+#endif
+
 
     //Timer setup
     t_slot = 250000 / network_params.number_of_nodes;
@@ -103,12 +110,16 @@ void IRAM_ATTR TimerAlarm() {
 void Task_TDMA(void *pvParameters) {
     static uint8_t Tx_node = 0;
     for (;;) {
-        // Vent her. bruger 0% CPU indtil timerISR vækker den
-        if (xSemaphoreTake(TDMA_mux, portMAX_DELAY) == pdPASS) { //Tager TDMA semafor
+        // Vent her indtil timerISR vækker den
+        if (xSemaphoreTake(TDMA_mux, portMAX_DELAY) == pdPASS) {
             
             Tx_node = node_counter % network_params.number_of_nodes;
             if (Tx_node == network_params.node_id) {
                 uint32_t t_start = micros(); //Husker vores starttidspunkt.
+                
+#ifndef DUMMY_RADIO
+                set_switches(DIR_TX_OMNI);
+#endif
                 modem_tx();
                 while ((micros() - t_start) < (t_slot - t_margin)) //Så længde vi måe slås med radioen. Sikrer os i bund og grund en bagkant.
                 {
@@ -120,9 +131,8 @@ void Task_TDMA(void *pvParameters) {
                 modem_rx();
             }
             else {
+                set_switches(DIR_RX_0);
                 uint32_t t_start = micros(); //Husker vores starttidspunkt.
-                //TODO Over i Radio TX
-                
                 while ((micros() - t_start) < (t_slot - t_margin)) //Så længde vi måe slås med radioen.
                 {
                     if(radio.available()){
@@ -134,9 +144,6 @@ void Task_TDMA(void *pvParameters) {
                         xQueueSend(rx_blockqueue[Tx_node], &buf, 0); //Sends the block through the queueeueue.
                     }
                 }
-                //TODO Radio til Rx
-                //! Du lugter af ost
-                //* Og det bare ret vigtigt
             }
         }
     }

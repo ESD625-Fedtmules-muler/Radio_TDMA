@@ -22,6 +22,22 @@ bool Assert_setting(bool result, const char* msg){
   return result;
 }
 
+void setup_testcarrier(rf24_pa_dbm_e level, uint8_t channel){
+  radio.powerDown();
+  delay(10);
+  radio.powerUp();
+  delay(10);
+  const uint8_t address[5] = "TEST";
+  radio.openWritingPipe(address);
+  radio.stopListening();
+  radio.setPALevel(level, false);
+  radio.setDataRate(RF24_1MBPS);
+  radio.setAutoAck(false);
+  radio.setRetries(0,0);
+  radio.startConstCarrier(level, channel);
+}
+
+
 
 void setup_modem(rf24_pa_dbm_e power_level){
   SPI.begin(PIN_RF_SCK, PIN_RF_MISO, PIN_RF_MOSI);
