@@ -61,7 +61,7 @@ struct Channel_state_table{
         offset++;
         for (size_t i = 0; i < MAX_NODES; i++)
         {
-            if(entries[i].lifetime >= 0){
+            if(entries[i].lifetime >== 0){
                 if(offset + sizeof(Look_up_entry) > len){
                     return offset; 
                 }
@@ -82,12 +82,13 @@ struct Channel_state_table{
         uint16_t num_entries = data[0];
         Serial.println("The number of coords");
         Serial.println(num_entries);
-        uint16_t offset = 1;
+        size_t offset = 1;
         for (size_t i = 0; i < num_entries; i++)
         {
             Look_up_entry incoming;
             Serial.println(incoming.latitude);
             memcpy(&incoming, data + offset, sizeof(Look_up_entry));
+            Serial.printf("Valid timeslots %f", incoming.latitude);
             if(entries[incoming.ID].lifetime > incoming.lifetime || entries[incoming.ID].lifetime == -1){
                 memcpy(&entries[incoming.ID], &incoming, sizeof(incoming));
             }
@@ -195,6 +196,7 @@ void task_GPS_runner(void *pvparameter) {
         if(i==0){ //Every once in a while blast out some GPS coords...
             uint8_t buf[512] = {0};
             uint16_t len = channel_state_table.serialize(buf, sizeof(buf));
+
             channel_state_table.printLookUpTable();
             router_send_data(network_params.GPS_IP, NODE_ID, buf, len);
             Serial.println("Sending GPS pos");
