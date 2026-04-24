@@ -132,7 +132,7 @@ void Task_TDMA(void *pvParameters) {
             }
             else {
 #ifndef DUMMY_RADIO
-                set_switches(DIR_RX_7);
+                set_switches(DIR_RX_OMNI);
 #endif
                 uint32_t t_start = micros(); //Husker vores starttidspunkt.
                 while ((micros() - t_start) < (t_slot - t_margin)) //Så længde vi måe slås med radioen.
