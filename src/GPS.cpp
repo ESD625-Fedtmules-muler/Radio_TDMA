@@ -61,7 +61,7 @@ struct Channel_state_table{
         offset++;
         for (size_t i = 0; i < MAX_NODES; i++)
         {
-            if(entries[i].lifetime > 0){
+            if(entries[i].lifetime >= 0){
                 if(offset + sizeof(Look_up_entry) > len){
                     return offset; 
                 }
@@ -82,11 +82,12 @@ struct Channel_state_table{
         uint16_t num_entries = data[0];
         Serial.println("The number of coords");
         Serial.println(num_entries);
-        uint16_t offset = 1;
+        size_t offset = 1;
         for (size_t i = 0; i < num_entries; i++)
         {
             Look_up_entry incoming;
             memcpy(data + offset, &incoming, sizeof(Look_up_entry));
+            Serial.printf("Valid timeslots %f", incoming.latitude);
             if(entries[incoming.ID].lifetime > incoming.lifetime || entries[incoming.ID].lifetime == -1){
                 memcpy(&entries[incoming.ID], &incoming, sizeof(incoming));
             }
