@@ -66,13 +66,13 @@ void TDMA_setup(uint8_t my_id) {
     "TDMA_Logic",     // Name
     4096,             // Stack size
     NULL,             // Parameters
-    5,                // Priority
+    2,                // Priority
     NULL,             // Task handle
     0                 // Core ID (0 or 1)
     );
     network_params.ready = true; //Sets the global flag to true. so we know we can use
     //pinMode(PIN_SDA, OUTPUT);
-    //pinMode(PIN_SCL, OUTPUT);
+    pinMode(PIN_COMPASS_SCL, OUTPUT);
 };
 
 // Interrupt til når der kommer pps
@@ -107,12 +107,13 @@ void IRAM_ATTR TimerAlarm() {
 
 
 
-void Task_TDMA(void *pvParameters) {
+void IRAM_ATTR Task_TDMA(void *pvParameters) {
     static uint8_t Tx_node = 0;
     for (;;) {
         // Vent her indtil timerISR vækker den
         if (xSemaphoreTake(TDMA_mux, portMAX_DELAY) == pdPASS) {
-            
+            digitalWrite(PIN_COMPASS_SCL, HIGH);
+
             Tx_node = node_counter % network_params.number_of_nodes;
             if (Tx_node == network_params.node_id) {
                 uint32_t t_start = micros(); //Husker vores starttidspunkt.
@@ -121,12 +122,15 @@ void Task_TDMA(void *pvParameters) {
                 set_switches(DIR_TX_OMNI);
 #endif
                 modem_tx();
+                delayMicroseconds(2000);
+
                 while ((micros() - t_start) < (t_slot - t_margin)) //Så længde vi måe slås med radioen. Sikrer os i bund og grund en bagkant.
                 {
                     block_item buf;
                     if(xQueueReceive(tx_blockqueue, &buf, 0) == pdTRUE){ //There is something we need to transmit
                         radio.write(buf.block_payload, 32);
                     }
+
                 }
                 modem_rx();
             }
@@ -147,6 +151,8 @@ void Task_TDMA(void *pvParameters) {
                     }
                 }
             }
+            digitalWrite(PIN_COMPASS_SCL, LOW);
+
         }
     }
 };

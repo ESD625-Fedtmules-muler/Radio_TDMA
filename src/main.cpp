@@ -38,6 +38,7 @@ void setup() {
     GPS_setup();
 
     xTaskCreate(RX_interface, "RX_interface", 4096, NULL, 2, NULL);
+    Serial.println(network_params.channel);
     Serial.println("All good");
 
     while (network_params.ready != true)

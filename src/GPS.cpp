@@ -11,6 +11,7 @@ HardwareSerial gpsSerial(1); // Use UART1 for GPS communication
 TinyGPSPlus gps;
 
 
+bool GPS_ok = false; //FLag to indicate we have gps lock
 
 
 
@@ -61,7 +62,7 @@ struct Channel_state_table{
         offset++;
         for (size_t i = 0; i < MAX_NODES; i++)
         {
-            if(entries[i].lifetime >== 0){
+            if(entries[i].lifetime >= 0){
                 if(offset + sizeof(Look_up_entry) > len){
                     return offset; 
                 }
@@ -73,23 +74,23 @@ struct Channel_state_table{
         return offset;
     };
 
-    bool evaluate_packet(uint8_t *data, size_t len){
-        Serial.println("Waiting for semaphore");
+    bool evaluate_packet(uint8_t *data, size_t len, uint8_t src = -1){
         if(xSemaphoreTake(table_mutex, portMAX_DELAY) == pdFALSE){
             return false;
         }
 
         uint16_t num_entries = data[0];
-        Serial.println("The number of coords");
-        Serial.println(num_entries);
+        if(num_entries == 0){
+            Serial.printf("Drone no.: %d does not know any positions, including his own", src);
+        }
+
         size_t offset = 1;
         for (size_t i = 0; i < num_entries; i++)
         {
             Look_up_entry incoming;
             Serial.println(incoming.latitude);
             memcpy(&incoming, data + offset, sizeof(Look_up_entry));
-            Serial.printf("Valid timeslots %f", incoming.latitude);
-            if(entries[incoming.ID].lifetime > incoming.lifetime || entries[incoming.ID].lifetime == -1){
+            if((entries[incoming.ID].lifetime > incoming.lifetime) || (entries[incoming.ID].lifetime == -1)){
                 memcpy(&entries[incoming.ID], &incoming, sizeof(incoming));
             }
         }
@@ -99,16 +100,21 @@ struct Channel_state_table{
     }
 
     //Updates the lifetime in seconds
-    void update_life_times(int8_t delta_time){
+    bool update_life_times(int8_t delta_time){
+        if(xSemaphoreTake(table_mutex, portMAX_DELAY) == pdFALSE){
+            return false;
+        }
         for (size_t i = 0; i < MAX_NODES; i++)
         {
-            if(entries[i].lifetime > 0){
+            if(entries[i].lifetime >= 0){
                 entries[i].lifetime += delta_time;
             }
             if(entries[i].lifetime > network_params.pos_timeout){
                 entries[i].lifetime = -1;
             }
         }
+        xSemaphoreGive(table_mutex);
+        return true;
     }
 
     void printLookUpTable() {
@@ -161,6 +167,7 @@ void Task_GPS_rx(void *pvParameter) {
             //Serial.print(c);
             if (gps.encode(c)) { 
                 if (gps.location.isUpdated()) {
+                    GPS_ok = true;
                     channel_state_table.update_entry(NODE_ID, gps.location.lat(), gps.location.lng());
                 }
             }
@@ -168,9 +175,7 @@ void Task_GPS_rx(void *pvParameter) {
         
         network_package block;
         if(xQueueReceive(gps_rx_queue, &block, pdMS_TO_TICKS(1)) == pdTRUE){
-            Serial.println("HEY MAN I GOT A PACKAET");
-            channel_state_table.evaluate_packet(block.payload.data, block.payload.len); //Parse the bitch
-        
+            channel_state_table.evaluate_packet(block.payload.data, block.payload.len, block.source_UID); //Parse the bitch
         }        
 
 
@@ -187,19 +192,26 @@ void Task_GPS_rx(void *pvParameter) {
 /// @param pvParameter 
 void task_GPS_runner(void *pvparameter) {
     uint32_t period = 1000; //tid i millisekunder
-    uint32_t periods_between_beacons = 10;
+    uint32_t periods_between_beacons = 3;
+    
+    while (!GPS_ok)
+    {
+        delay(50);
+    }
+    
+    
     TickType_t xLastWakeTime = xTaskGetTickCount();
     int i = 0;
+    
     for (;;) {
         channel_state_table.update_life_times(period/1000);
+        channel_state_table.printLookUpTable();
         i = (i+1) % periods_between_beacons;
         if(i==0){ //Every once in a while blast out some GPS coords...
             uint8_t buf[512] = {0};
             uint16_t len = channel_state_table.serialize(buf, sizeof(buf));
-
-            channel_state_table.printLookUpTable();
             router_send_data(network_params.GPS_IP, NODE_ID, buf, len);
-            Serial.println("Sending GPS pos");
+            
         }
         vTaskDelayUntil( &xLastWakeTime, pdMS_TO_TICKS(period));
     }
@@ -211,11 +223,10 @@ void task_GPS_runner(void *pvparameter) {
 
 
 
-
 void GPS_setup() {
     // Det reset skal sendes til nogle af dem, for at sikre at GPS'en sender mere end bare GPGLL (For at tinyGPS virker)
     byte resetConfig[] = {0xB5, 0x62, 0x06, 0x09, 0x0D, 0x00, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0x00, 0x00, 0x01, 0x19, 0x98};
-    gpsSerial.begin(9600, SERIAL_8N1, PIN_GPS_RX, PIN_GPS_TX);
+    gpsSerial.begin(9600, SERIAL_8N1, PIN_GPS_TX, PIN_GPS_RX);
     delay(100);
     gpsSerial.write(resetConfig, sizeof(resetConfig));
 
@@ -233,7 +244,7 @@ void GPS_setup() {
         NULL,             // Parameters
         5,                // Priority
         NULL,             // Task handle
-        0                 // Core ID (0 or 1)
+        1                 // Core ID (0 or 1)
     );
 
     xTaskCreatePinnedToCore(
@@ -243,6 +254,6 @@ void GPS_setup() {
         NULL,             // Parameters
         5,                // Priority
         NULL,             // Task handle
-        0                 // Core ID (0 or 1)
+        1                 // Core ID (0 or 1)
     );
 };
