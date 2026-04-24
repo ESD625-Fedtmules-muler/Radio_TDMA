@@ -28,6 +28,7 @@ struct Channel_state_table{
 
     void begin(){
         table_mutex = xSemaphoreCreateMutex();
+
         for(int i = 0; i < network_params.number_of_nodes; i++) {
             entries[i].ID = i;
             entries[i].latitude = 0;
@@ -44,7 +45,7 @@ struct Channel_state_table{
     uint8_t get_known_positions(){
         uint8_t count = 0;
         for (size_t i = 0; i < MAX_NODES; i++) {
-            if (entries[i].lifetime > 0) count++;
+            if (entries[i].lifetime >= 0) count++;
         }
         return count;
     }
@@ -73,10 +74,14 @@ struct Channel_state_table{
     };
 
     bool evaluate_packet(uint8_t *data, size_t len){
-        if(!xSemaphoreTake(table_mutex, portMAX_DELAY)){
+        Serial.println("Waiting for semaphore");
+        if(xSemaphoreTake(table_mutex, portMAX_DELAY) == pdFALSE){
             return false;
         }
+
         uint16_t num_entries = data[0];
+        Serial.println("The number of coords");
+        Serial.println(num_entries);
         uint16_t offset = 1;
         for (size_t i = 0; i < num_entries; i++)
         {
@@ -161,7 +166,9 @@ void Task_GPS_rx(void *pvParameter) {
         
         network_package block;
         if(xQueueReceive(gps_rx_queue, &block, pdMS_TO_TICKS(1)) == pdTRUE){
+            Serial.println("HEY MAN I GOT A PACKAET");
             channel_state_table.evaluate_packet(block.payload.data, block.payload.len); //Parse the bitch
+        
         }        
 
 
