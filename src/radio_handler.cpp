@@ -3,7 +3,7 @@
 #include <nRF24L01.h>
 #include <RF24.h>
 #include <SPI.h>
-#include <ESP32-c3_pinout.h>
+#include <pins.h>
 #include <main.h>
 
 RF24 radio(PIN_RF_CE, PIN_RF_CSN);

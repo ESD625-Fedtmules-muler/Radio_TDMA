@@ -1,5 +1,5 @@
 #include <Arduino.h>
-#include "ESP32-c3_pinout.h"
+#include "pins.h"
 #include "main.h"
 #include <switches.h>
 

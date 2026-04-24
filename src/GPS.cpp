@@ -1,6 +1,6 @@
 #include <SPI.h>
 #include <Arduino.h>
-#include <ESP32-c3_pinout.h>
+#include <pins.h>
 #include <network_params.h>
 #include <TinyGPSPlus.h>
 #include <gps.h>
