@@ -23,6 +23,7 @@ struct Channel_state_table{
         entries[ID].latitude = gps.location.lat();
         entries[ID].longitude = gps.location.lng();
         entries[ID].hasUpdate = true;
+        entries[ID].lifetime = 0;
     }
 
     void begin(){
@@ -41,14 +42,11 @@ struct Channel_state_table{
     /// @brief Runs through the entry table to find the number of known positions
     /// @return Returns the number of known positions including your own.... If you know that one of course O_o 
     uint8_t get_known_positions(){
-        int i = 0;
-        for (size_t i = 0; i < MAX_NODES; i++)
-        {
-            if(entries[i].lifetime > 0){
-                i++;
-            }
+        uint8_t count = 0;
+        for (size_t i = 0; i < MAX_NODES; i++) {
+            if (entries[i].lifetime > 0) count++;
         }
-        return i;
+        return count;
     }
 
 
@@ -123,8 +121,9 @@ struct Channel_state_table{
                 Serial.print(entries[i].latitude, 6);
                 Serial.print(", Lon: ");
                 Serial.print(entries[i].longitude, 6);
-                Serial.print(", RSSI: ");
-                Serial.println(entries[i].rssi);
+                Serial.print(", Time sice: ");
+                Serial.print(entries[i].lifetime);
+                Serial.println("s");
             } else {
                 Serial.println("No data");
             }
