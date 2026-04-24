@@ -163,9 +163,8 @@ void Task_GPS_rx(void *pvParameter) {
         }
         
         network_package block;
-        if(xQueueReceive(gps_rx_queue, &block, pdMS_TO_TICKS(100)) == pdTRUE){
-            
-            
+        if(xQueueReceive(gps_rx_queue, &block, pdMS_TO_TICKS(1)) == pdTRUE){
+            channel_state_table.evaluate_packet(block.payload.data, block.payload.len); //Parse the bitch
         }        
 
 
@@ -181,23 +180,20 @@ void Task_GPS_rx(void *pvParameter) {
 /// @brief Task in charge of once every second updating lifetimes, and updating most adequate switches.
 /// @param pvParameter 
 void task_GPS_runner(void *pvparameter) {
-
     uint32_t period = 1000; //tid i millisekunder
     uint32_t periods_between_beacons = 10;
     TickType_t xLastWakeTime = xTaskGetTickCount();
-    
     int i = 0;
     for (;;) {
         channel_state_table.update_life_times(period/1000);
-        i += i % periods_between_beacons;
-
-
+        i = (i+1) % periods_between_beacons;
         if(i==0){ //Every once in a while blast out some GPS coords...
             uint8_t buf[512] = {0};
             uint16_t len = channel_state_table.serialize(buf, sizeof(buf));
+            channel_state_table.printLookUpTable();
             router_send_data(network_params.GPS_IP, NODE_ID, buf, len);
+            Serial.println("Sending GPS pos");
         }
-        
         vTaskDelayUntil( &xLastWakeTime, pdMS_TO_TICKS(period));
     }
 
