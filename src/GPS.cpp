@@ -78,13 +78,11 @@ struct Channel_state_table{
         }
         uint16_t num_entries = data[0];
         uint16_t offset = 1;
-
-
         for (size_t i = 0; i < num_entries; i++)
         {
             Look_up_entry incoming;
             memcpy(data + offset, &incoming, sizeof(Look_up_entry));
-            if(entries[incoming.ID].lifetime > incoming.lifetime){
+            if(entries[incoming.ID].lifetime > incoming.lifetime || entries[incoming.ID].lifetime == -1){
                 memcpy(&entries[incoming.ID], &incoming, sizeof(incoming));
             }
         }
