@@ -121,6 +121,7 @@ void task_dechopper(void *pvParameters)
             block_item data_block;
             if (!xQueueReceive(listener_queue, &data_block, portMAX_DELAY))
             {
+                Serial.println("Queue error");
                 assembly_ok = false;
                 break;
             }
@@ -142,15 +143,15 @@ void task_dechopper(void *pvParameters)
         }
         
 
+
         if (assembly_ok)
         {
-            //Serial.println("Assembly okay so far checking CRC");
-            //output_package.debug_msg();
             uint32_t crc = esp_rom_crc32_le(0, output_package.data, sizeof(output_package.length));
             if(header.payload_crc != crc){
                 Serial.printf("CRC fail");
                 continue;
             }
+            
             xQueueSend(rx_package_queue, &output_package, portMAX_DELAY);
         }
     }
@@ -241,7 +242,7 @@ void setup_chopper(){
             "De-chopper",     // Name
             4096,             // Stack size
             &params,             // Parameters
-            6,                // Priority
+            8,                // Priority
             NULL,             // Task handle
             1                 // Core ID (0 or 1)
         );

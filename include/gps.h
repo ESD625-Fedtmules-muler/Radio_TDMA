@@ -18,6 +18,8 @@ struct __attribute__((packed)) Look_up_entry{ //Gør lige så den ik fylder så 
     int32_t rssi;
     bool hasUpdate;
     int8_t lifetime;
+
+    void debug_msg();
 };
 
 void GPS_setup();

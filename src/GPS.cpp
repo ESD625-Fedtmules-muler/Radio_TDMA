@@ -12,6 +12,17 @@ TinyGPSPlus gps;
 
 
 bool GPS_ok = false; //FLag to indicate we have gps lock
+
+void Look_up_entry::debug_msg() {
+    Serial.println("--- Look_up_entry ---");
+    Serial.print("ID:        "); Serial.println(ID);
+    Serial.print("Latitude:  "); Serial.println(latitude, 6);
+    Serial.print("Longitude: "); Serial.println(longitude, 6);
+    Serial.print("RSSI:      "); Serial.println(rssi);
+    Serial.print("HasUpdate: "); Serial.println(hasUpdate ? "true" : "false");
+    Serial.print("Lifetime:  "); Serial.println(lifetime);
+    Serial.println("---------------------");
+}
 AntennaDir switch_states[MAX_NODES];
 
 
@@ -56,32 +67,38 @@ struct Channel_state_table{
         if(!xSemaphoreTake(table_mutex, portMAX_DELAY)){
             return 0;
         }
-        size_t offset = 0;
-        uint8_t num_entries = get_known_positions();
-        data[0] = num_entries;
-        offset++;
-        for (size_t i = 0; i < MAX_NODES; i++)
-        {
+
+        size_t offset = 1; // reserver plads til count-byte
+        uint8_t packed = 0;
+
+        for (size_t i = 0; i < MAX_NODES; i++){
             if(entries[i].lifetime >= 0){
-                if(offset + sizeof(Look_up_entry) > len){
-                    return offset; 
-                }
+                if(offset + sizeof(Look_up_entry) > len) break;
                 memcpy(data + offset, &entries[i], sizeof(Look_up_entry));
                 offset += sizeof(Look_up_entry);
+                packed++;
             }
         }
+
+        data[0] = packed; // skriv den reelle count til sidst
+
         xSemaphoreGive(table_mutex);
         return offset;
-    };
+    }
 
     bool evaluate_packet(uint8_t *data, size_t len, uint8_t src = -1){
         if(xSemaphoreTake(table_mutex, portMAX_DELAY) == pdFALSE){
             return false;
         }
-
         uint16_t num_entries = data[0];
+
         if(num_entries == 0){
             Serial.printf("Drone no.: %d does not know any positions, including his own", src);
+        }
+        if(num_entries > network_params.number_of_nodes){
+            Serial.printf("KAT DER SKRIGER, fik %d nodes i gps table", num_entries);
+            xSemaphoreGive(table_mutex);
+            return false;
         }
 
         size_t offset = 1;
@@ -90,8 +107,10 @@ struct Channel_state_table{
             Look_up_entry incoming;
             memcpy(&incoming, data + offset, sizeof(Look_up_entry));
             if((entries[incoming.ID].lifetime > incoming.lifetime) || (entries[incoming.ID].lifetime == -1)){
+                
                 memcpy(&entries[incoming.ID], &incoming, sizeof(incoming));
             }
+            offset += sizeof(Look_up_entry);
         }
 
         xSemaphoreGive(table_mutex);
@@ -288,9 +307,9 @@ void update_switch_States(Channel_state_table *table) {
 /// @param pvParameter 
 void task_GPS_runner(void *pvparameter) {
     uint32_t period = 1000; //tid i millisekunder
-    uint32_t periods_between_beacons = 3;
+    uint32_t periods_between_beacons = 2;
     
-    while (!GPS_ok)
+    while (!GPS_ok & !network_params.ready)
     {
         delay(50);
     }

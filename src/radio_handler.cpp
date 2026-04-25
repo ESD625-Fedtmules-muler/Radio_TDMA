@@ -56,13 +56,13 @@ void setup_modem(rf24_pa_dbm_e power_level){
   
   radio.powerUp();
   delay(1);
-
+  
   radio.disableAckPayload(); //SLår acks fra
   radio.setDataRate(network_params.bitRate); //1 MBITS / S 
   radio.setAutoAck(false); //SLår auto acks fra  i modtager
   radio.setPALevel(power_level, true); //max transmit power 
   radio.setChannel(network_params.channel); //Vi bruger channel 10
-  radio.disableCRC();
+  //radio.disableCRC();
   radio.openWritingPipe(network_params.pipe_name);
   radio.openReadingPipe(0, network_params.pipe_name);
 
