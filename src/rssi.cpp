@@ -4,7 +4,7 @@
 
 LR1121 LBAA = new Module(
   PIN_RF_LR1121_CSN,     // NSS (CS)
-  PIN_RF_LR1121_BUSY,    // BUSY  <-- HER!
+  RADIOLIB_NC,    // BUSY  <-- HER!
   RADIOLIB_NC,           // DIO1 (kan være NC hvis ikke brugt)
   RADIOLIB_NC,           // RESET (eller giv en pin hvis du bruger den)
   SPI
@@ -16,13 +16,15 @@ void setup_rssi(){
     Serial.print("Starting LR1121: ");
     Serial.println(result_Sband);
     float freq = 2400 + network_params.channel;
-    Serial.printf("Setting freq: %f", freq);
+    Serial.printf("Setting freq: %f\n", freq);
     result_Sband = LBAA.setFrequency(freq);
     
     LBAA.setSpreadingFactor(5);
     LBAA.setBandwidth(812.5, true);
     LBAA.setCodingRate(4);
     
+    LBAA.startReceive();
+    LBAA.getRSSI(false);
     LBAA.startReceive();
 
 }

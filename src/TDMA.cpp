@@ -62,7 +62,8 @@ void TDMA_setup(uint8_t my_id) {
 
     esp_task_wdt_delete(xTaskGetIdleTaskHandleForCPU(0));
 
-
+    SPI.begin(PIN_RF_SCK, PIN_RF_MISO, PIN_RF_MOSI);
+    SPI.setFrequency(8000000);
     setup_rssi();
     setup_modem(RF24_PA_MAX);
 

@@ -28,8 +28,8 @@ void RX_interface(void *pvParameters){
 void setup() {
     Serial.begin(115200);
 #ifndef DUMMY_RADIO
-    pinMode(PIN_RF_LR1121_CSN, OUTPUT);
-    digitalWrite(PIN_RF_LR1121_CSN, HIGH);
+    //pinMode(PIN_RF_LR1121_CSN, OUTPUT);
+    //digitalWrite(PIN_RF_LR1121_CSN, HIGH);
 #endif
     TDMA_setup(NODE_ID);
     setup_chopper();

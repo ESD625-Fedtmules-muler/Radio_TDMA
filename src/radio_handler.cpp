@@ -55,8 +55,7 @@ void re_init_modem(rf24_pa_dbm_e power_level){
 }
 
 void setup_modem(rf24_pa_dbm_e power_level){
-  SPI.begin(PIN_RF_SCK, PIN_RF_MISO, PIN_RF_MOSI);
-  SPI.setFrequency(8000000);
+
   
   Assert_setting(radio.begin(&SPI), "Setting up modem (trust this one)");
   Assert_setting(radio.isChipConnected(), "Chip connected (dont trust this one too much)");
