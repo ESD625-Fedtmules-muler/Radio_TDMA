@@ -192,6 +192,33 @@ void Task_GPS_rx(void *pvParameter) {
 
 
 
+float calculate_distance(float lat1, float lon1, float lat2, float lon2) {
+    //Fin formel fra: https://www.movable-type.co.uk/scripts/latlong.html
+    const float R = 6371000.0f; // Jordens radius i meter
+    const float TO_RAD = M_PI / 180.0f;
+
+    // Omregn til radianer og find delta med det samme
+    float phi1 = lat1 * TO_RAD;
+    float phi2 = lat2 * TO_RAD;
+    float dphi = (lat2 - lat1) * TO_RAD;
+    float dlambda = (lon2 - lon1) * TO_RAD;
+
+    // Haversine formlen med float-specifikke funktioner (sinf, cosf, sqrtf)
+    // Vi gemmer resultaterne af sinf for at undgå at beregne det samme to gange
+    float sdphi = sinf(dphi * 0.5f);
+    float sdlambda = sinf(dlambda * 0.5f);
+
+    float a = sdphi * sdphi +
+              cosf(phi1) * cosf(phi2) *
+              sdlambda * sdlambda;
+
+    // atan2f(sqrtf(a), sqrtf(1.0f - a)) er det samme som asinf(sqrtf(a))
+    // Det sparer en sqrtf og en tungere atan2-beregning.
+    float c = 2.0f * asinf(sqrtf(a));
+
+    return R * c;
+}
+
 
 float calculate_bearing(float lat1, float lon1, float lat2, float lon2) {
     // Grader til radianer
@@ -229,6 +256,13 @@ void update_switch_States(Channel_state_table *table) {
             // Hvis vi ikke har GPS data, sæt til OMNI
             //! Vi skal nok have lidt flere betingelser der sætter det her. Fx hvis vi ikke kender vores egen pos endnu.
             if (target_entry.lifetime == -1) {
+                switch_states[i] = DIR_RX_OMNI;
+                continue;
+            }
+
+            //Tjekker lige om vi er under 10 meter fra target.
+            float dist = calculate_distance(own_entry.latitude, own_entry.longitude, target_entry.latitude, target_entry.longitude);
+            if (dist <= 10) {
                 switch_states[i] = DIR_RX_OMNI;
                 continue;
             }
