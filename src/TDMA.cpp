@@ -19,7 +19,7 @@ void IRAM_ATTR pps_isr();
 
 
 QueueHandle_t tx_blockqueue = NULL;
-QueueHandle_t rx_blockqueue[MAX_NODES];
+QueueHandle_t rx_blockqueue[MAX_NODES] = {NULL};
 
 const uint32_t t_margin = 1000;
 
@@ -86,7 +86,6 @@ void Task_TDMA(void *pvParameters) {
         wait_for_falling();
         node_id = 0;
         uint32_t pps_start = micros();
-        Serial.println("PING");
 
         for (size_t i = 0; i < num_loops; i++) {
             uint32_t slot_start = pps_start + (i * t_slot);
@@ -112,16 +111,17 @@ void Task_TDMA(void *pvParameters) {
 #ifndef DUMMY_RADIO
                 set_switches(switch_states[node_id]);
 #endif
-                digitalWrite(PIN_COMPASS_SCL, HIGH);
+                modem_rx();
                 while (micros() < slot_end) {
                     if (radio.available()) {
                         block_item buf;
                         radio.read(buf.block_payload, 32);
                         buf.ID = node_id;
-                        xQueueSend(rx_blockqueue[node_id], &buf, 0);
+                        if(rx_blockqueue[node_id] != NULL){
+                            xQueueSend(rx_blockqueue[node_id], &buf, 0);
+                        }
                     }
                 }
-                digitalWrite(PIN_COMPASS_SCL, LOW);
             }
             node_id = (node_id + 1) % network_params.number_of_nodes;
         }
