@@ -10,7 +10,22 @@
 HardwareSerial gpsSerial(1); // Use UART1 for GPS communication
 TinyGPSPlus gps;
 
-
+const char* antennaDirToStr(AntennaDir dir) {
+    switch(dir) {
+        case ERROR:       return "ERR ";
+        case DIR_TX_OMNI: return "TX_O";
+        case DIR_RX_OMNI: return "RX_O";
+        case DIR_RX_0:    return "RX_0";
+        case DIR_RX_1:    return "RX_1";
+        case DIR_RX_2:    return "RX_2";
+        case DIR_RX_3:    return "RX_3";
+        case DIR_RX_4:    return "RX_4";
+        case DIR_RX_5:    return "RX_5";
+        case DIR_RX_6:    return "RX_6";
+        case DIR_RX_7:    return "RX_7";
+        default:          return "????";
+    }
+}
 bool GPS_ok = false; //FLag to indicate we have gps lock
 
 void Look_up_entry::debug_msg() {
@@ -150,32 +165,31 @@ struct Channel_state_table{
 
     void printLookUpTable() {
         Serial.println("---- LOOK UP TABLE ----");
+        Serial.println("ID   | ANT  | LAT        | LON        | AGE | DIST     | HDG");
+        Serial.println("-----|------|------------|------------|-----|----------|-----");
         for (int i = 0; i < network_params.number_of_nodes; i++) {
-            Serial.print("Node ");
-            Serial.print(i);
-            if (i == NODE_ID) {
-            Serial.print("(ME)");
-            }
-            Serial.print(": ");
-
+            char line[100];
             if (entries[i].lifetime >= 0) {
-                Serial.print("Lat: ");
-                Serial.print(entries[i].latitude, 6);
-                Serial.print(", Lon: ");
-                Serial.print(entries[i].longitude, 6);
-                Serial.print(", Time sice: ");
-                Serial.print(entries[i].lifetime);
-                Serial.println("s");
-                Serial.print("Dist to node: ");
-                Serial.println(calculate_distance(entries[NODE_ID].latitude, entries[NODE_ID].longitude, entries[i].latitude, entries[i].longitude));
-                Serial.print("Heading to node: ");
-                Serial.println(calculate_bearing(entries[NODE_ID].latitude, entries[NODE_ID].longitude, entries[i].latitude, entries[i].longitude));
+                snprintf(line, sizeof(line), "%2d%s | %s | %10.6f | %10.6f | %3ds | %8.2fm | %.1f°",
+                    i,
+                    (i == NODE_ID) ? "*" : " ",
+                    antennaDirToStr(switch_states[i]),
+                    entries[i].latitude,
+                    entries[i].longitude,
+                    entries[i].lifetime,
+                    calculate_distance(entries[NODE_ID].latitude, entries[NODE_ID].longitude, entries[i].latitude, entries[i].longitude),
+                    calculate_bearing(entries[NODE_ID].latitude, entries[NODE_ID].longitude, entries[i].latitude, entries[i].longitude)
+                );
             } else {
-                Serial.println("No data");
+                snprintf(line, sizeof(line), "%2d%s | %s | NO DATA",
+                    i,
+                    (i == NODE_ID) ? "*" : " ",
+                    antennaDirToStr(switch_states[i])
+                );
             }
+            Serial.println(line);
         }
         Serial.println("-----------------------");
-
     }
 };
 
@@ -276,7 +290,10 @@ void update_switch_States(Channel_state_table *table) {
 
      for (int i = 0; i < MAX_NODES; i++) {
             // Spring os selv over
-            if (i == NODE_ID) continue;
+            if (i == NODE_ID){
+                switch_states[i] = DIR_TX_OMNI; 
+                continue;
+            } 
 
             Look_up_entry target_entry = table->get_entry(i); //Henter entry for given i.
             
@@ -289,7 +306,7 @@ void update_switch_States(Channel_state_table *table) {
             
             //Tjekker lige om vi er under 10 meter fra target.
             float dist = calculate_distance(own_entry.latitude, own_entry.longitude, target_entry.latitude, target_entry.longitude);
-            if (dist <= 10) {
+            if (dist <= network_params.min_dist) {
                 switch_states[i] = DIR_RX_OMNI;
                 continue;
             }

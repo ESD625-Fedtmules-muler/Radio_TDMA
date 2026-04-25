@@ -16,6 +16,7 @@ struct Network_params {
     uint16_t GPS_IP = 0x20;
     uint8_t pos_timeout = 60;
     bool ready = false;
+    uint32_t min_dist = 30;
 };
 extern Network_params network_params;
 extern RF24 radio;
