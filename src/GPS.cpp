@@ -88,7 +88,6 @@ struct Channel_state_table{
         for (size_t i = 0; i < num_entries; i++)
         {
             Look_up_entry incoming;
-            Serial.println(incoming.latitude);
             memcpy(&incoming, data + offset, sizeof(Look_up_entry));
             if((entries[incoming.ID].lifetime > incoming.lifetime) || (entries[incoming.ID].lifetime == -1)){
                 memcpy(&entries[incoming.ID], &incoming, sizeof(incoming));
@@ -177,8 +176,6 @@ void Task_GPS_rx(void *pvParameter) {
         if(xQueueReceive(gps_rx_queue, &block, pdMS_TO_TICKS(1)) == pdTRUE){
             channel_state_table.evaluate_packet(block.payload.data, block.payload.len, block.source_UID); //Parse the bitch
         }        
-
-
     }
 }
 

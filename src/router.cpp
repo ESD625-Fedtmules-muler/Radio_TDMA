@@ -79,7 +79,6 @@ void task_router(void *pvParameters){
         //If we got a package.
         network_package rx_network_package;
         rx_network_package.parse_header(&rx_package);
-        
         //Tjekker om det en pakke vi har arbejdet med før
         if(recieved_message_table.exists(rx_network_package.source_UID, rx_network_package.nonce)){
             continue;
@@ -180,7 +179,6 @@ void router_send_data(uint16_t dest_UID, uint16_t src_UID, uint8_t* buffer, size
     tx_network_package.nonce = generate_nonce(); // Generer nonce
     tx_network_package.payload.len = length;
     memcpy(tx_network_package.payload.data, buffer, length);
-
     // Serializer ind i en queue item
     Package_queue_item tx_package;
     if (!tx_network_package.serialize(&tx_package)) {
@@ -189,5 +187,7 @@ void router_send_data(uint16_t dest_UID, uint16_t src_UID, uint8_t* buffer, size
     }
 
 
-    xQueueSend(tx_package_queue, &tx_package, portMAX_DELAY);
+    if(xQueueSend(tx_package_queue, &tx_package, portMAX_DELAY) == pdFAIL){
+        Serial.println("ERROR, tx_package queue");
+    }
 }

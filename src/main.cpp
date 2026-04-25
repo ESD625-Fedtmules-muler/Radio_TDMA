@@ -37,7 +37,16 @@ void setup() {
     setup_router();
     GPS_setup();
 
-    xTaskCreate(RX_interface, "RX_interface", 4096, NULL, 2, NULL);
+    Serial.printf("CPU speed: %dMHz", ESP.getCpuFreqMHz());
+    xTaskCreatePinnedToCore(
+    RX_interface,        // Task function
+    "RX_interface",     // Name
+    4096,             // Stack size
+    NULL,             // Parameters
+    3,                // Priority
+    NULL,             // Task handle
+    1                 // Core ID (0 or 1)
+    );
     Serial.println(network_params.channel);
     Serial.println("All good");
 

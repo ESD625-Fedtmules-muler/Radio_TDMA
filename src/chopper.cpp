@@ -86,7 +86,9 @@ void task_dechopper(void *pvParameters)
     param_dechopper params;
     memcpy(&params, pvParameters, sizeof(param_dechopper));
     QueueHandle_t listener_queue = params.ListenerQueue; 
-
+    while(network_params.ready != true){
+        delay(100);
+    }
 
     while (true)
     {        
