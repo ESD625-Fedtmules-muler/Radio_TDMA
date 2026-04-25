@@ -11,6 +11,7 @@ volatile uint8_t node_counter = 0;
 
 hw_timer_t * hw_timer = NULL;
 SemaphoreHandle_t TDMA_mux;
+AntennaDir switch_states[MAX_NODES]; // Skal være look up for hvordan switch skal stå for hver nodeID. Regnes i GPS.cpp
 
 
 void Task_TDMA(void *pvParameters);
@@ -38,6 +39,13 @@ void TDMA_setup(uint8_t my_id) {
 
     pinMode(PIN_GPS_PPS, INPUT_PULLUP);
 
+    for (size_t i = 0; i < MAX_NODES; i++)
+    {
+        switch_states[MAX_NODES] = DIR_RX_OMNI;
+    }
+    
+
+    
 #ifndef DUMMY_RADIO
     setup_RF_switches();
 #endif

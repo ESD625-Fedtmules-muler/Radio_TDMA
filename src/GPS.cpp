@@ -23,7 +23,7 @@ void Look_up_entry::debug_msg() {
     Serial.print("Lifetime:  "); Serial.println(lifetime);
     Serial.println("---------------------");
 }
-AntennaDir switch_states[MAX_NODES];
+extern AntennaDir switch_states[MAX_NODES];
 
 
 struct Channel_state_table{
@@ -139,9 +139,11 @@ struct Channel_state_table{
         if(xSemaphoreTake(table_mutex, portMAX_DELAY) == pdFALSE){
             Look_up_entry ENTRY;
             Serial.println("Kunne ikke få mutex til entry");
+            xSemaphoreGive(table_mutex); //Returns the semaphore after use
+
             return ENTRY;
         }
-        
+        xSemaphoreGive(table_mutex); //Returns the semaphore after use
         return entries[node_id];
     }
 
@@ -194,8 +196,9 @@ void Task_GPS_rx(void *pvParameter) {
 
     QueueHandle_t gps_rx_queue = router_setup_listener(network_params.GPS_IP, 10);
     
-    
+    Serial.println("GPS_Rx task running");
     for(;;) {
+        
         while (gpsSerial.available() > 0) {
             c = gpsSerial.read();
             //Serial.print(c);
@@ -283,7 +286,7 @@ void update_switch_States(Channel_state_table *table) {
                 switch_states[i] = DIR_RX_OMNI;
                 continue;
             }
-
+            
             //Tjekker lige om vi er under 10 meter fra target.
             float dist = calculate_distance(own_entry.latitude, own_entry.longitude, target_entry.latitude, target_entry.longitude);
             if (dist <= 10) {
@@ -340,19 +343,11 @@ void task_GPS_runner(void *pvparameter) {
 
 
 void GPS_setup() {
-    // Det reset skal sendes til nogle af dem, for at sikre at GPS'en sender mere end bare GPGLL (For at tinyGPS virker)
     byte resetConfig[] = {0xB5, 0x62, 0x06, 0x09, 0x0D, 0x00, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0x00, 0x00, 0x01, 0x19, 0x98};
     gpsSerial.begin(9600, SERIAL_8N1, PIN_GPS_TX, PIN_GPS_RX);
     delay(100);
     gpsSerial.write(resetConfig, sizeof(resetConfig));
-
-    Serial.println("GPS serial initialized");
-
-    //Look-up laves her.
-    //tableMutex = xSemaphoreCreateMutex();    
     channel_state_table.begin();
-
-
     xTaskCreatePinnedToCore(
         Task_GPS_rx,        // Task function
         "GPS_rx",     // Name
@@ -362,7 +357,6 @@ void GPS_setup() {
         NULL,             // Task handle
         1                 // Core ID (0 or 1)
     );
-
     xTaskCreatePinnedToCore(
         task_GPS_runner,        // Task function
         "GPS_runner",     // Name
@@ -372,4 +366,6 @@ void GPS_setup() {
         NULL,             // Task handle
         1                 // Core ID (0 or 1)
     );
+    Serial.println("GPS serial initialized");
+
 };
