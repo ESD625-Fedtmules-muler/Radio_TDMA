@@ -24,11 +24,9 @@ bool Assert_setting(bool result, const char* msg){
 
 void setup_testcarrier(rf24_pa_dbm_e level, uint8_t channel){
   radio.powerDown();
-  delay(10);
+  delayMicroseconds(200);
   radio.powerUp();
-  delay(10);
-  const uint8_t address[5] = "TEST";
-  radio.openWritingPipe(address);
+  delayMicroseconds(200);
   radio.stopListening();
   radio.setPALevel(level, false);
   radio.setDataRate(RF24_1MBPS);
@@ -38,6 +36,23 @@ void setup_testcarrier(rf24_pa_dbm_e level, uint8_t channel){
 }
 
 
+void re_init_modem(rf24_pa_dbm_e power_level){
+  radio.powerDown();
+  delayMicroseconds(200);
+  
+  radio.powerUp();
+  delayMicroseconds(200);
+  
+  
+  radio.disableAckPayload(); //SLår acks fra
+  radio.setDataRate(network_params.bitRate); //1 MBITS / S 
+  radio.setAutoAck(false); //SLår auto acks fra  i modtager
+  radio.setPALevel(power_level, true); //max transmit power 
+  radio.setChannel(network_params.channel); //Vi bruger channel 10
+  //radio.disableCRC();
+  radio.openWritingPipe(network_params.pipe_name);
+  radio.openReadingPipe(0, network_params.pipe_name);
+}
 
 void setup_modem(rf24_pa_dbm_e power_level){
   SPI.begin(PIN_RF_SCK, PIN_RF_MISO, PIN_RF_MOSI);
@@ -51,20 +66,7 @@ void setup_modem(rf24_pa_dbm_e power_level){
   } else{
     Serial.println("CHIP is NRF24L01");
   }
-  radio.powerDown();
-  delay(1);
-  
-  radio.powerUp();
-  delay(1);
-  
-  radio.disableAckPayload(); //SLår acks fra
-  radio.setDataRate(network_params.bitRate); //1 MBITS / S 
-  radio.setAutoAck(false); //SLår auto acks fra  i modtager
-  radio.setPALevel(power_level, true); //max transmit power 
-  radio.setChannel(network_params.channel); //Vi bruger channel 10
-  //radio.disableCRC();
-  radio.openWritingPipe(network_params.pipe_name);
-  radio.openReadingPipe(0, network_params.pipe_name);
+  re_init_modem(power_level);
 
 }
 

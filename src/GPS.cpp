@@ -14,7 +14,7 @@ const char* antennaDirToStr(AntennaDir dir) {
     switch(dir) {
         case ERROR:       return "ERR ";
         case DIR_TX_OMNI: return "TX_O";
-        case DIR_RX_OMNI: return "RX_O";
+        case DIR_RX_OMNI: return "RX  ";
         case DIR_RX_0:    return "RX_0";
         case DIR_RX_1:    return "RX_1";
         case DIR_RX_2:    return "RX_2";
@@ -39,7 +39,8 @@ void Look_up_entry::debug_msg() {
     Serial.println("---------------------");
 }
 extern AntennaDir switch_states[MAX_NODES];
-
+extern float P_Signal[MAX_NODES];
+extern float P_Channel[MAX_NODES];
 
 struct Channel_state_table{
     Look_up_entry entries[MAX_NODES];
@@ -165,15 +166,25 @@ struct Channel_state_table{
 
     void printLookUpTable() {
         Serial.println("---- LOOK UP TABLE ----");
-        Serial.println("ID   | ANT  | LAT        | LON        | AGE | DIST     | HDG");
-        Serial.println("-----|------|------------|------------|-----|----------|-----");
+        Serial.println("ID   | ANT  | P_SIG(dBm) | P_CH(dBm) | LAT        | LON        | AGE | DIST     | HDG");
+        Serial.println("-----|------|------------|-----------|------------|------------|-----|----------|-----");
         for (int i = 0; i < network_params.number_of_nodes; i++) {
-            char line[100];
+            char line[150];
+            
+            char p_sig_str[12], p_ch_str[12];
+            if(P_Signal[i] <= -200.0f) snprintf(p_sig_str, sizeof(p_sig_str), "    N/A   ");
+            else                        snprintf(p_sig_str, sizeof(p_sig_str), "%7.2f dBm", P_Signal[i]);
+            
+            if(P_Channel[i] <= -200.0f) snprintf(p_ch_str, sizeof(p_ch_str), "   N/A  ");
+            else                         snprintf(p_ch_str, sizeof(p_ch_str), "%6.2f dBm", P_Channel[i]);
+
             if (entries[i].lifetime >= 0) {
-                snprintf(line, sizeof(line), "%2d%s | %s | %10.6f | %10.6f | %3ds | %8.2fm | %.1f°",
+                snprintf(line, sizeof(line), "%2d%s | %s | %s | %s | %10.6f | %10.6f | %3ds | %8.2fm | %.1f°",
                     i,
                     (i == NODE_ID) ? "*" : " ",
                     antennaDirToStr(switch_states[i]),
+                    p_sig_str,
+                    p_ch_str,
                     entries[i].latitude,
                     entries[i].longitude,
                     entries[i].lifetime,
@@ -181,10 +192,12 @@ struct Channel_state_table{
                     calculate_bearing(entries[NODE_ID].latitude, entries[NODE_ID].longitude, entries[i].latitude, entries[i].longitude)
                 );
             } else {
-                snprintf(line, sizeof(line), "%2d%s | %s | NO DATA",
+                snprintf(line, sizeof(line), "%2d%s | %s | %s | %s | NO DATA",
                     i,
                     (i == NODE_ID) ? "*" : " ",
-                    antennaDirToStr(switch_states[i])
+                    antennaDirToStr(switch_states[i]),
+                    p_sig_str,
+                    p_ch_str
                 );
             }
             Serial.println(line);

@@ -6,3 +6,4 @@ void setup_modem(rf24_pa_dbm_e power_level);
 void modem_tx();
 void modem_rx();
 void setup_testcarrier(rf24_pa_dbm_e level, uint8_t channel);
+void re_init_modem(rf24_pa_dbm_e power_level);

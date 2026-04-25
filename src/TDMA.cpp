@@ -3,7 +3,7 @@
 #include "main.h"
 #include <switches.h>
 #include "esp_task_wdt.h"
-
+#include <rssi.h>
 
 Network_params network_params;
 
@@ -12,7 +12,8 @@ volatile uint8_t node_counter = 0;
 hw_timer_t * hw_timer = NULL;
 SemaphoreHandle_t TDMA_mux;
 AntennaDir switch_states[MAX_NODES]; // Skal være look up for hvordan switch skal stå for hver nodeID. Regnes i GPS.cpp
-
+float P_Signal[MAX_NODES] = {-200.0};
+float P_Channel[MAX_NODES]= {-200.0};
 
 void Task_TDMA(void *pvParameters);
 //void IRAM_ATTR TimerAlarm();
@@ -23,6 +24,7 @@ QueueHandle_t tx_blockqueue = NULL;
 QueueHandle_t rx_blockqueue[MAX_NODES] = {NULL};
 
 const uint32_t t_margin = 1000;
+const uint32_t t_RSSI_sampling = 5000;
 
 //TIden af et timeslot i mikrosekunder
 uint32_t t_slot; 
@@ -60,6 +62,10 @@ void TDMA_setup(uint8_t my_id) {
 
     esp_task_wdt_delete(xTaskGetIdleTaskHandleForCPU(0));
 
+
+    setup_rssi();
+    setup_modem(RF24_PA_MAX);
+
     xTaskCreatePinnedToCore(
         Task_TDMA,
         "TDMA_Logic",
@@ -74,7 +80,7 @@ void TDMA_setup(uint8_t my_id) {
     pinMode(PIN_COMPASS_SCL, OUTPUT);
 }
 
-
+                    
 void wait_for_falling(){
     while(digitalRead(PIN_GPS_PPS) == LOW){esp_task_wdt_reset(); };
     while(digitalRead(PIN_GPS_PPS) == HIGH){esp_task_wdt_reset(); };
@@ -85,10 +91,19 @@ void wait_for_falling(){
 void Task_TDMA(void *pvParameters) {
     esp_task_wdt_delete(NULL);
     
+
+
+    char rssi_package_buf[32];
+    memset(rssi_package_buf, 0xFF, sizeof(rssi_package_buf));
+
     uint32_t num_loops = 1000000 / t_slot - 1;
     int node_id = 0;
     // Vent på at setup er færdig
     while (network_params.ready != true) { delay(10); }
+
+
+
+
 
     while (true) {
         wait_for_falling();
@@ -107,20 +122,27 @@ void Task_TDMA(void *pvParameters) {
                 set_switches(DIR_TX_OMNI);
 #endif
                 modem_tx();
-                delay(2);
-                while (micros() < slot_end) {
+                delay(2);                
+                while (micros() < slot_end - t_RSSI_sampling) {
                     block_item buf;
                     if (xQueueReceive(tx_blockqueue, &buf, 0) == pdTRUE) {
                         radio.write(buf.block_payload, 32);
                     }
                 }
+                digitalWrite(PIN_COMPASS_SCL, HIGH);
+                while (micros() < slot_end){ 
+                    radio.write(rssi_package_buf, 32);
+                };
+                digitalWrite(PIN_COMPASS_SCL, LOW);
+
                 modem_rx();
             } else {
 #ifndef DUMMY_RADIO
                 set_switches(switch_states[node_id]);
 #endif
                 modem_rx();
-                while (micros() < slot_end) {
+                radio.flush_rx();
+                while (micros() < slot_end - t_RSSI_sampling*2) {
                     if (radio.available()) {
                         block_item buf;
                         radio.read(buf.block_payload, 32);
@@ -130,6 +152,29 @@ void Task_TDMA(void *pvParameters) {
                         }
                     }
                 }
+                digitalWrite(PIN_COMPASS_SCL, HIGH);
+                
+                float rssi = 0;
+                int iterations = 0;
+                
+                while (micros() < slot_end - t_RSSI_sampling){
+                    rssi += speedy_rssi();
+                    iterations++;
+                    delayMicroseconds(500);
+                }
+                P_Channel[node_id] = rssi / float(iterations);
+                
+
+                rssi = 0;
+                iterations = 0;
+                while (micros() < slot_end){ 
+                    rssi += speedy_rssi();
+                    iterations++;
+                    delayMicroseconds(500);
+                };
+                P_Signal[node_id] = rssi / float(iterations);
+
+                digitalWrite(PIN_COMPASS_SCL, LOW);
             }
             node_id = (node_id + 1) % network_params.number_of_nodes;
         }

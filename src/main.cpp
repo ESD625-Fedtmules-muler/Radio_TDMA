@@ -31,7 +31,6 @@ void setup() {
     pinMode(PIN_RF_LR1121_CSN, OUTPUT);
     digitalWrite(PIN_RF_LR1121_CSN, HIGH);
 #endif
-    setup_modem(RF24_PA_MAX);
     TDMA_setup(NODE_ID);
     setup_chopper();
     setup_router();

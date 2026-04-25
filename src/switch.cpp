@@ -28,8 +28,13 @@ void set_switches(AntennaDir antenna_dir) {
     B00110010,    //DIR_RX_6
     B01110010    //DIR_RX_7
     };
+    byte value;
+    if(antenna_dir == ERROR){
+        value = antennaValues[2]; //Sætter os til RX_omni in cas
 
-    byte value = antennaValues[antenna_dir];
+    }{
+        value = antennaValues[antenna_dir];
+    }
     digitalWrite(PIN_SR_STR, LOW);
     shiftOut(PIN_SR_DAT, PIN_SR_CLK, MSBFIRST, value);
     digitalWrite(PIN_SR_STR, HIGH); 
