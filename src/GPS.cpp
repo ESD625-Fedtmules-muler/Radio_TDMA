@@ -137,7 +137,7 @@ struct Channel_state_table{
             }
             Serial.print(": ");
 
-            if (entries[i].latitude > 0) {
+            if (entries[i].lifetime >= 0) {
                 Serial.print("Lat: ");
                 Serial.print(entries[i].latitude, 6);
                 Serial.print(", Lon: ");
@@ -145,11 +145,16 @@ struct Channel_state_table{
                 Serial.print(", Time sice: ");
                 Serial.print(entries[i].lifetime);
                 Serial.println("s");
+                Serial.print("Dist to node: ");
+                Serial.println(calculate_distance(entries[NODE_ID].latitude, entries[NODE_ID].longitude, entries[i].latitude, entries[i].longitude));
+                Serial.print("Heading to node: ");
+                Serial.println(calculate_bearing(entries[NODE_ID].latitude, entries[NODE_ID].longitude, entries[i].latitude, entries[i].longitude));
             } else {
                 Serial.println("No data");
             }
         }
         Serial.println("-----------------------");
+
     }
 };
 
