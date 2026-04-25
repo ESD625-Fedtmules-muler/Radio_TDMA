@@ -116,6 +116,17 @@ struct Channel_state_table{
         return true;
     }
 
+    Look_up_entry get_entry(uint8_t node_id) {
+        if(xSemaphoreTake(table_mutex, portMAX_DELAY) == pdFALSE){
+            Look_up_entry ENTRY;
+            Serial.println("Kunne ikke få mutex til entry");
+            return ENTRY;
+        }
+        
+        return entries[node_id];
+    }
+
+
     void printLookUpTable() {
         Serial.println("---- LOOK UP TABLE ----");
         for (int i = 0; i < network_params.number_of_nodes; i++) {
@@ -181,6 +192,7 @@ void Task_GPS_rx(void *pvParameter) {
 
 
 
+
 float calculate_bearing(float lat1, float lon1, float lat2, float lon2) {
     // Grader til radianer
     float phi1 = lat1 * (M_PI / 180.0);
@@ -206,21 +218,22 @@ float calculate_bearing(float lat1, float lon1, float lat2, float lon2) {
 
 void update_switch_States(Channel_state_table *table) {
 
+    Look_up_entry own_entry = table->get_entry(NODE_ID); //Starter lige med at hente vores egen pos.
+
      for (int i = 0; i < MAX_NODES; i++) {
             // Spring os selv over
-            if (i == network_params.node_id) continue;
+            if (i == NODE_ID) continue;
 
-            float target_lat = table->entries[i].latitude;
-            float target_lon = table->entries[i].longitude;
-
+            Look_up_entry target_entry = table->get_entry(i); //Henter entry for given i.
+            
             // Hvis vi ikke har GPS data, sæt til OMNI
             //! Vi skal nok have lidt flere betingelser der sætter det her. Fx hvis vi ikke kender vores egen pos endnu.
-            if (table->entries[i].lifetime == -1) {
+            if (target_entry.lifetime == -1) {
                 switch_states[i] = DIR_RX_OMNI;
                 continue;
             }
             //Her regner vi retning. Men det er absoulut heading relativ til nord!
-            float brng = calculate_bearing(table->entries[NODE_ID].latitude, table->entries[NODE_ID].longitude, target_lat, target_lon);
+            float brng = calculate_bearing(own_entry.latitude, own_entry.longitude, target_entry.latitude, target_entry.longitude);
             
             //! sector skal kun regnes hvis det er en drone og ikke basen!
             int sector = (int)((brng + 22.5f) / 45.0f) % 8; // Chatten siger at vi deler antennerne op i 8 dele
