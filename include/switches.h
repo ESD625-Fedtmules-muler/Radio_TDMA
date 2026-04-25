@@ -1,5 +1,6 @@
 #include <Arduino.h>
 
+#pragma once
 void setup_RF_switches();
 
 

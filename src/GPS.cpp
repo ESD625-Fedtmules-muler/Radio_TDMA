@@ -12,7 +12,7 @@ TinyGPSPlus gps;
 
 
 bool GPS_ok = false; //FLag to indicate we have gps lock
-
+AntennaDir switch_states[MAX_NODES];
 
 
 struct Channel_state_table{
@@ -181,6 +181,53 @@ void Task_GPS_rx(void *pvParameter) {
 
 
 
+float calculate_bearing(float lat1, float lon1, float lat2, float lon2) {
+    // Grader til radianer
+    float phi1 = lat1 * (M_PI / 180.0);
+    float phi2 = lat2 * (M_PI / 180.0);
+    float delta_lambda = (lon2 - lon1) * (M_PI / 180.0);
+
+    // Fin formel fra: https://www.movable-type.co.uk/scripts/latlong.html
+    float y = sin(delta_lambda) * cos(phi2);
+    float x = cos(phi1) * sin(phi2) - sin(phi1) * cos(phi2) * cos(delta_lambda);
+    
+    float theta = atan2(y, x);
+
+    // Konverter tilbage til grader
+    float bearing = theta * (180.0 / M_PI);
+
+    // Normaliser til 0-360 grader (Kan vi lige selv vælge om vi gider)
+    /* if (bearing < 0) {
+        bearing += 360.0;
+    }
+     */
+    return bearing;
+}
+
+void update_switch_States(Channel_state_table *table) {
+
+     for (int i = 0; i < MAX_NODES; i++) {
+            // Spring os selv over
+            if (i == network_params.node_id) continue;
+
+            float target_lat = table->entries[i].latitude;
+            float target_lon = table->entries[i].longitude;
+
+            // Hvis vi ikke har GPS data, sæt til OMNI
+            //! Vi skal nok have lidt flere betingelser der sætter det her. Fx hvis vi ikke kender vores egen pos endnu.
+            if (table->entries[i].lifetime == -1) {
+                switch_states[i] = DIR_RX_OMNI;
+                continue;
+            }
+            //Her regner vi retning. Men det er absoulut heading relativ til nord!
+            float brng = calculate_bearing(table->entries[NODE_ID].latitude, table->entries[NODE_ID].longitude, target_lat, target_lon);
+            
+            //! sector skal kun regnes hvis det er en drone og ikke basen!
+            int sector = (int)((brng + 22.5f) / 45.0f) % 8; // Chatten siger at vi deler antennerne op i 8 dele
+            //! Det her skal også mappes over til rigtige antenne udgange i stedet! Ligenu kører vi 0 er nord og 4 er syd.
+            switch_states[i] = (AntennaDir)(DIR_RX_0 + sector);
+            }
+}
 
 
 
@@ -202,6 +249,7 @@ void task_GPS_runner(void *pvparameter) {
     
     for (;;) {
         channel_state_table.update_life_times(period/1000);
+        update_switch_States(&channel_state_table); // Her får vi lige maskinen til at regne hvilke switches skal sætte for alle timeslots.
         channel_state_table.printLookUpTable();
         i = (i+1) % periods_between_beacons;
         if(i==0){ //Every once in a while blast out some GPS coords...

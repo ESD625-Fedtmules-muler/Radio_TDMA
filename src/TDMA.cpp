@@ -79,7 +79,6 @@ void Task_TDMA(void *pvParameters) {
     
     uint32_t num_loops = 1000000 / t_slot - 1;
     int node_id = 0;
-
     // Vent på at setup er færdig
     while (network_params.ready != true) { delay(10); }
 
@@ -111,7 +110,7 @@ void Task_TDMA(void *pvParameters) {
                 modem_rx();
             } else {
 #ifndef DUMMY_RADIO
-                set_switches(DIR_RX_OMNI);
+                set_switches(switch_states[node_id]);
 #endif
                 digitalWrite(PIN_COMPASS_SCL, HIGH);
                 while (micros() < slot_end) {
