@@ -359,7 +359,7 @@ void task_GPS_runner(void *pvparameter) {
         if(i==0){ //Every once in a while blast out some GPS coords...
             uint8_t buf[512] = {0};
             uint16_t len = channel_state_table.serialize(buf, sizeof(buf));
-            router_send_data(network_params.GPS_IP, NODE_ID, buf, len);
+            router_send_data(network_params.GPS_IP, NODE_ID, buf, len, Near_cast); //Sends to direct nabours only
             
         }
         vTaskDelayUntil( &xLastWakeTime, pdMS_TO_TICKS(period));
