@@ -163,7 +163,7 @@ uint8_t generate_nonce(){
     return nonce_counter.fetch_add(1);
 }
 
-void router_send_data(uint16_t dest_UID, uint16_t src_UID, uint8_t* buffer, size_t length) {
+void router_send_data(uint16_t dest_UID, uint16_t src_UID, uint8_t* buffer, size_t length, MSG_type_t routing_type=P2P) {
     // Valider længde
     if (length > sizeof(payload_buffer_t::data)) {
         Serial.println("ERROR, payload too large");

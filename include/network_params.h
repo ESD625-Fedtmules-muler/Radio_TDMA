@@ -2,7 +2,7 @@
 #pragma once
 #include <RF24.h>
 
-#define MAX_NODES 10
+#define MAX_NODES 5
 
 enum MSG_type_t { Near_cast = 0, Broadcast = 1, P2P = 2 };
 
