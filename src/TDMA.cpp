@@ -139,11 +139,10 @@ void Task_TDMA(void *pvParameters) {
                 digitalWrite(PIN_COMPASS_SCL, LOW);
 
             } else {
+                modem_rx();
 #ifndef DUMMY_RADIO
                 set_switches(switch_states[node_id]);
 #endif
-                modem_rx();
-                radio.flush_rx();
                 while (micros() < slot_end - t_RSSI_sampling*2) {
                     if (radio.available()) {
                         block_item buf;
