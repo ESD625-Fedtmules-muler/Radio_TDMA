@@ -130,13 +130,14 @@ void Task_TDMA(void *pvParameters) {
                         radio.write(buf.block_payload, 32);
                     }
                 }
-                digitalWrite(PIN_COMPASS_SCL, HIGH);
+                setup_testcarrier(RF24_PA_MAX, network_params.channel);
                 while (micros() < slot_end){ 
-                    radio.write(rssi_package_buf, 32);
                 };
+                digitalWrite(PIN_COMPASS_SCL, HIGH);
+                stop_testcarrier(RF24_PA_MAX);
+                modem_rx();
                 digitalWrite(PIN_COMPASS_SCL, LOW);
 
-                modem_rx();
             } else {
 #ifndef DUMMY_RADIO
                 set_switches(switch_states[node_id]);
@@ -153,7 +154,6 @@ void Task_TDMA(void *pvParameters) {
                         }
                     }
                 }
-                digitalWrite(PIN_COMPASS_SCL, HIGH);
                 
                 float rssi = 0;
                 int iterations = 0;
@@ -175,7 +175,6 @@ void Task_TDMA(void *pvParameters) {
                 };
                 P_Signal[node_id] = rssi / float(iterations);
 
-                digitalWrite(PIN_COMPASS_SCL, LOW);
             }
             node_id = (node_id + 1) % network_params.number_of_nodes;
         }

@@ -22,36 +22,32 @@ bool Assert_setting(bool result, const char* msg){
   return result;
 }
 
-void setup_testcarrier(rf24_pa_dbm_e level, uint8_t channel){
-  radio.powerDown();
-  delayMicroseconds(200);
-  radio.powerUp();
-  delayMicroseconds(200);
-  radio.stopListening();
-  radio.setPALevel(level, false);
-  radio.setDataRate(RF24_1MBPS);
-  radio.setAutoAck(false);
-  radio.setRetries(0,0);
-  radio.startConstCarrier(level, channel);
+void setup_testcarrier(rf24_pa_dbm_e level, uint8_t channel) {
+    // startConstCarrier() håndterer selv power sekvensen
+    radio.startConstCarrier(level, channel);
 }
 
 
-void re_init_modem(rf24_pa_dbm_e power_level){
-  radio.powerDown();
-  delayMicroseconds(200);
-  
-  radio.powerUp();
-  delayMicroseconds(200);
-  
-  
-  radio.disableAckPayload(); //SLår acks fra
-  radio.setDataRate(network_params.bitRate); //1 MBITS / S 
-  radio.setAutoAck(false); //SLår auto acks fra  i modtager
-  radio.setPALevel(power_level, true); //max transmit power 
-  radio.setChannel(network_params.channel); //Vi bruger channel 10
-  //radio.disableCRC();
-  radio.openWritingPipe(network_params.pipe_name);
-  radio.openReadingPipe(0, network_params.pipe_name);
+void stop_testcarrier(rf24_pa_dbm_e power_level) {
+    radio.stopConstCarrier();   // Sætter PWR_UP = 0, rydder CONT_WAVE
+    delay(5);                  // Giv chippen tid - ESP32 er hurtig
+    radio.powerUp();            // Vækk den igen
+    re_init_modem(power_level);
+}
+
+
+void re_init_modem(rf24_pa_dbm_e power_level) {
+
+    
+    radio.setDataRate(network_params.bitRate);
+    radio.setAutoAck(false);
+    radio.disableAckPayload();
+    radio.setPALevel(power_level, true);
+    radio.setChannel(network_params.channel);
+    radio.setRetries(0, 0);                          // Du har det i testcarrier men ikke her
+    //radio.disableCRC();
+    radio.openWritingPipe(network_params.pipe_name);
+    radio.openReadingPipe(0, network_params.pipe_name);
 }
 
 void setup_modem(rf24_pa_dbm_e power_level){
@@ -65,7 +61,13 @@ void setup_modem(rf24_pa_dbm_e power_level){
   } else{
     Serial.println("CHIP is NRF24L01");
   }
+
+  radio.powerDown();
+  delay(10);                                        // Tpd2stby - vigtigt!
+  radio.powerUp();
+  delay(5);
   re_init_modem(power_level);
+  radio.stopListening();                            // Definér en start-tilstand
 
 }
 

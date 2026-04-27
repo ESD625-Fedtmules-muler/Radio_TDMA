@@ -308,15 +308,20 @@ void update_switch_States(Channel_state_table *table) {
                 continue;
             } 
 
-            Look_up_entry target_entry = table->get_entry(i); //Henter entry for given i.
+            //!! === Testfuntion ====
+            switch_states[i] = DIR_RX_2;
             
+
+
+            Look_up_entry target_entry = table->get_entry(i); //Henter entry for given i.
             // Hvis vi ikke har GPS data, sæt til OMNI
-            //! Vi skal nok have lidt flere betingelser der sætter det her. Fx hvis vi ikke kender vores egen pos endnu.
+            //? Vi skal nok have lidt flere betingelser der sætter det her. Fx hvis vi ikke kender vores egen pos endnu.
             if (target_entry.lifetime == -1) {
                 switch_states[i] = DIR_RX_OMNI;
                 continue;
             }
-            
+
+            /*
             //Tjekker lige om vi er under 10 meter fra target.
             float dist = calculate_distance(own_entry.latitude, own_entry.longitude, target_entry.latitude, target_entry.longitude);
             if (dist <= network_params.min_dist) {
@@ -326,10 +331,11 @@ void update_switch_States(Channel_state_table *table) {
             //Her regner vi retning. Men det er absoulut heading relativ til nord!
             float brng = calculate_bearing(own_entry.latitude, own_entry.longitude, target_entry.latitude, target_entry.longitude);
             
-            //! sector skal kun regnes hvis det er en drone og ikke basen!
+            //? sector skal kun regnes hvis det er en drone og ikke basen!
             int sector = (int)((brng + 22.5f) / 45.0f) % 8; // Chatten siger at vi deler antennerne op i 8 dele
-            //! Det her skal også mappes over til rigtige antenne udgange i stedet! Ligenu kører vi 0 er nord og 4 er syd.
+            //? Det her skal også mappes over til rigtige antenne udgange i stedet! Ligenu kører vi 0 er nord og 4 er syd.
             switch_states[i] = (AntennaDir)(DIR_RX_0 + sector);
+            */
             }
 }
 
