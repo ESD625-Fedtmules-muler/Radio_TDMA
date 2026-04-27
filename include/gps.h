@@ -1,6 +1,8 @@
 #pragma once
 #include <Arduino.h>
 #include <switches.h>
+#include <Wire.h>
+
 
 #define GPS_PAKKE_SIZE 256
 extern uint8_t GPS_buffer[GPS_PAKKE_SIZE];
@@ -9,6 +11,12 @@ extern volatile bool GPS_pakke_status;
 
 
 extern AntennaDir switch_states[MAX_NODES]; // Skal være look up for hvordan switch skal stå for hver nodeID. Regnes i GPS.cpp
+
+
+struct TrackerNode {
+    int nodeID;      // ID i look_up table
+    int i2cAddress;  // I2C adresse på stepper-controlleren
+};
 
 
 struct __attribute__((packed)) Look_up_entry{ //Gør lige så den ik fylder så meget

@@ -10,6 +10,9 @@
 HardwareSerial gpsSerial(1); // Use UART1 for GPS communication
 TinyGPSPlus gps;
 
+TrackerNode trackerNodes[2];
+
+
 const char* antennaDirToStr(AntennaDir dir) {
     switch(dir) {
         case ERROR:       return "ERR ";
@@ -297,6 +300,19 @@ float calculate_bearing(float lat1, float lon1, float lat2, float lon2) {
     return bearing;
 }
 
+
+void send_azi_to_stepper(float angle, int i2cAddr) {
+    Serial.print("Skriver til: ");
+    Serial.println(i2cAddr);
+    Serial.print("Med denne vinkel: ");
+    Serial.println(angle);
+    Wire.beginTransmission(i2cAddr);
+    Wire.write((byte*)&angle, sizeof(float)); 
+    Wire.endTransmission();
+}
+
+
+
 void update_switch_States(Channel_state_table *table) {
 
     Look_up_entry own_entry = table->get_entry(NODE_ID); //Starter lige med at hente vores egen pos.
@@ -308,11 +324,6 @@ void update_switch_States(Channel_state_table *table) {
                 continue;
             } 
 
-            //!! === Testfuntion ====
-            switch_states[i] = DIR_RX_2;
-            
-
-
             Look_up_entry target_entry = table->get_entry(i); //Henter entry for given i.
             // Hvis vi ikke har GPS data, sæt til OMNI
             //? Vi skal nok have lidt flere betingelser der sætter det her. Fx hvis vi ikke kender vores egen pos endnu.
@@ -321,7 +332,7 @@ void update_switch_States(Channel_state_table *table) {
                 continue;
             }
 
-            /*
+            
             //Tjekker lige om vi er under 10 meter fra target.
             float dist = calculate_distance(own_entry.latitude, own_entry.longitude, target_entry.latitude, target_entry.longitude);
             if (dist <= network_params.min_dist) {
@@ -330,12 +341,23 @@ void update_switch_States(Channel_state_table *table) {
             }
             //Her regner vi retning. Men det er absoulut heading relativ til nord!
             float brng = calculate_bearing(own_entry.latitude, own_entry.longitude, target_entry.latitude, target_entry.longitude);
-            
+#ifdef BASE
+        // kører kun på basen
+        for (int t = 0; t < 2; t++) {
+            if (dist >= network_params.min_dist) {   
+                if (trackerNodes[t].nodeID == i) {
+                    send_azi_to_stepper(-brng, trackerNodes[t].i2cAddress);
+                    switch_states[i] = (AntennaDir) (DIR_RX_1 + i); // Sætter switch til antenne 0 + nodeID. 
+                    continue;
+                }
+            }
+        }
+#else
             //? sector skal kun regnes hvis det er en drone og ikke basen!
             int sector = (int)((brng + 22.5f) / 45.0f) % 8; // Chatten siger at vi deler antennerne op i 8 dele
             //? Det her skal også mappes over til rigtige antenne udgange i stedet! Ligenu kører vi 0 er nord og 4 er syd.
             switch_states[i] = (AntennaDir)(DIR_RX_0 + sector);
-            */
+#endif            
             }
 }
 
@@ -379,6 +401,17 @@ void task_GPS_runner(void *pvparameter) {
 
 
 void GPS_setup() {
+
+#ifdef BASE
+    Wire.begin(PIN_COMPASS_SDA, PIN_COMPASS_SCL); // Start I2C som Master på C3
+    Serial.println("Base Mode: I2C Master initialized");
+
+    trackerNodes[0].nodeID = 2;
+    trackerNodes[0].i2cAddress = 0x08;
+    trackerNodes[1].nodeID = 3;
+    trackerNodes[1].i2cAddress = 0x09;
+#endif
+
     byte resetConfig[] = {0xB5, 0x62, 0x06, 0x09, 0x0D, 0x00, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0x00, 0x00, 0x01, 0x19, 0x98};
     gpsSerial.begin(9600, SERIAL_8N1, PIN_GPS_TX, PIN_GPS_RX);
     delay(100);
