@@ -210,7 +210,7 @@ void task_GPS_runner(void *pvparameter) {
     for (;;) {
         channel_state_table.update_life_times(period/1000);
         update_switch_States(&channel_state_table); // Her får vi lige maskinen til at regne hvilke switches skal sætte for alle timeslots.
-        //channel_state_table.printLookUpTable();
+        channel_state_table.printLookUpTable();
         i = (i+1) % periods_between_beacons;
         if(i==0){ //Every once in a while blast out some GPS coords...
             uint8_t buf[512] = {0};

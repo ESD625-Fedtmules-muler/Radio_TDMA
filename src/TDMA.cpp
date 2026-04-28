@@ -158,25 +158,25 @@ void Task_TDMA(void *pvParameters) {
                     }
                 }
                 
-                float rssi = 0;
+                float rssi = -200.0;
                 int iterations = 0;
                 
                 while (micros() < slot_end - t_RSSI_sampling){
-                    rssi += speedy_rssi();
+                    rssi = max(speedy_rssi(), rssi);
                     iterations++;
                     delayMicroseconds(500);
                 }
-                channel_state_table.P_Channel[node_id] = rssi / float(iterations);
+                channel_state_table.P_Channel[node_id] = rssi;
                 
 
-                rssi = 0;
+                rssi = -200.0;
                 iterations = 0;
                 while (micros() < slot_end){ 
-                    rssi += speedy_rssi();
+                    rssi = max(speedy_rssi(), rssi);
                     iterations++;
                     delayMicroseconds(500);
                 };
-                channel_state_table.P_Signal[node_id] = rssi / float(iterations);
+                channel_state_table.P_Signal[node_id] = rssi;
 
             }
             node_id = (node_id + 1) % network_params.number_of_nodes;
