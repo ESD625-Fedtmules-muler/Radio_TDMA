@@ -99,7 +99,7 @@ void loop() {
             Serial.write((uint8_t)buf[k]);
         }
     }
-    delay(100000);
+    delay(1000);
 
 }
 
