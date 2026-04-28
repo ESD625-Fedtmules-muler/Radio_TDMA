@@ -8,7 +8,7 @@ enum MSG_type_t { Near_cast = 0, Broadcast = 1, P2P = 2 };
 
 struct Network_params {
     uint8_t TTL = 6;
-    uint8_t channel = 100;
+    uint8_t channel = 85;
     rf24_datarate_e bitRate = RF24_1MBPS;
     uint8_t number_of_nodes = MAX_NODES;
     uint8_t node_id = 0;
