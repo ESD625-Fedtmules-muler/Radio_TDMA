@@ -2,17 +2,16 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 # --- CONFIGURATION ---
-FILE_1 = 'omnitestmikkel.csv' 
-FILE_2 = 'Dirtestmikkel.csv'  # <--- Change this to your second filename
+FILE_1 = 'omni_m_jammer_drone_part1.csv' 
+FILE_2 = 'omni_m_jammer_drone_part1.csv'  # <--- Change this to your second filename
 
-NODE_ID = 3
+NODE_ID = 1
 
 # Params for File 1
-SKIP_1, END_1 = 700, 1150
+SKIP_1, END_1 = 10, 3400
 
 # Params for File 2
-SKIP_2 = 700
-END_2 = 1200 # Set to a number if you want a specific end row for file 2
+SKIP_2, END_2 = 10, 3400  # Set to a number if you want a specific end row for file 2
 
 def load_and_filter(path, skip, end, node_id):
     """Helper function to load and clean the data"""
@@ -52,8 +51,8 @@ def process_telemetry():
 
         # Plot Dataset 2
         if not df2.empty:
-            mean2 = df2['P_Signal'].mean()
-            plt.plot(df2['timestamp'], df2['P_Signal'], label=f'File 2 (Mean: {mean2:.2f})', color='green', alpha=0.8)
+            mean2 = df2['P_Channel'].mean()
+            plt.plot(df2['timestamp'], df2['P_Channel'], label=f'File 2 (Mean: {mean2:.2f})', color='green', alpha=0.8)
             plt.axhline(y=mean2, color='green', linestyle='--', alpha=0.3)
             print(f"File 2 Mean: {mean2:.4f}")
 

@@ -132,7 +132,12 @@ void send_azi_to_stepper(float angle, int i2cAddr) {
     Serial.print("Med denne vinkel: ");
     Serial.println(angle);
     */
-    Wire.beginTransmission(i2cAddr);
+    Wire.beginTransmission(0x09);
+    Wire.write((byte*)&angle, sizeof(float)); 
+    Wire.endTransmission();
+
+    
+    Wire.beginTransmission(0x08);
     Wire.write((byte*)&angle, sizeof(float)); 
     Wire.endTransmission();
 }
@@ -210,13 +215,17 @@ void task_GPS_runner(void *pvparameter) {
     for (;;) {
         channel_state_table.update_life_times(period/1000);
         update_switch_States(&channel_state_table); // Her får vi lige maskinen til at regne hvilke switches skal sætte for alle timeslots.
-        channel_state_table.printLookUpTable();
+        
+        //channel_state_table.printLookUpTable();
+        
         i = (i+1) % periods_between_beacons;
         if(i==0){ //Every once in a while blast out some GPS coords...
             uint8_t buf[512] = {0};
             uint16_t len = channel_state_table.serialize(buf, sizeof(buf));
             router_send_data(network_params.GPS_IP, NODE_ID, buf, len, Near_cast); //Sends to direct nabours only
-            
+            router_send_data(network_params.GPS_IP, NODE_ID, buf, len, Near_cast); //Sends to direct nabours only
+            router_send_data(network_params.GPS_IP, NODE_ID, buf, len, Near_cast); //Sends to direct nabours only
+
         }
         vTaskDelayUntil( &xLastWakeTime, pdMS_TO_TICKS(period));
     }
@@ -234,10 +243,10 @@ void GPS_setup() {
     Wire.begin(PIN_COMPASS_SDA, PIN_COMPASS_SCL); // Start I2C som Master på C3
     Serial.println("Base Mode: I2C Master initialized");
 
-    trackerNodes[0].nodeID = 2;
-    trackerNodes[0].i2cAddress = 0x08;
-    trackerNodes[1].nodeID = 3;
-    trackerNodes[1].i2cAddress = 0x09;
+    trackerNodes[1].nodeID = 2;
+    trackerNodes[1].i2cAddress = 0x08;
+    trackerNodes[0].nodeID = 3;
+    trackerNodes[0].i2cAddress = 0x09;
 #endif
 
     byte resetConfig[] = {0xB5, 0x62, 0x06, 0x09, 0x0D, 0x00, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0x00, 0x00, 0x01, 0x19, 0x98};
