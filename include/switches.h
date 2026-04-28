@@ -8,7 +8,6 @@ enum AntennaDir {
     ERROR,
     DIR_TX_OMNI,
     DIR_RX_OMNI,
-    DIR_RX_0,
     DIR_RX_1,
     DIR_RX_2,
     DIR_RX_3,
@@ -16,6 +15,7 @@ enum AntennaDir {
     DIR_RX_5,
     DIR_RX_6,
     DIR_RX_7,
+    DIR_RX_8,
 };
 
 AntennaDir get_antenna_dir(uint8_t tx_node_id);
