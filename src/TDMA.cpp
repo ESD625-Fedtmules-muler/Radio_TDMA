@@ -9,11 +9,14 @@ Network_params network_params;
 
 volatile uint8_t node_counter = 0; 
 
+
+extern Channel_state_table channel_state_table;
+
 hw_timer_t * hw_timer = NULL;
 SemaphoreHandle_t TDMA_mux;
-AntennaDir switch_states[MAX_NODES]; // Skal være look up for hvordan switch skal stå for hver nodeID. Regnes i GPS.cpp
-float P_Signal[MAX_NODES] = {-200.0};
-float P_Channel[MAX_NODES]= {-200.0};
+//AntennaDir switch_states[MAX_NODES]; // Skal være look up for hvordan switch skal stå for hver nodeID. Regnes i GPS.cpp
+//float P_Signal[MAX_NODES] = {-200.0};
+//float P_Channel[MAX_NODES]= {-200.0};
 
 void Task_TDMA(void *pvParameters);
 //void IRAM_ATTR TimerAlarm();
@@ -43,7 +46,7 @@ void TDMA_setup(uint8_t my_id) {
 
     for (size_t i = 0; i < MAX_NODES; i++)
     {
-        switch_states[MAX_NODES] = DIR_RX_OMNI;
+        channel_state_table.switch_states[MAX_NODES] = DIR_RX_OMNI;
     }
     
 
@@ -133,15 +136,15 @@ void Task_TDMA(void *pvParameters) {
                 setup_testcarrier(RF24_PA_MAX, network_params.channel);
                 while (micros() < slot_end){ 
                 };
-                digitalWrite(PIN_COMPASS_SCL, HIGH);
+                //digitalWrite(PIN_COMPASS_SCL, HIGH);
                 stop_testcarrier(RF24_PA_MAX);
                 modem_rx();
-                digitalWrite(PIN_COMPASS_SCL, LOW);
+                //digitalWrite(PIN_COMPASS_SCL, LOW);
 
             } else {
                 modem_rx();
 #ifndef DUMMY_RADIO
-                set_switches(switch_states[node_id]);
+                set_switches(channel_state_table.switch_states[node_id]);
 #endif
                 while (micros() < slot_end - t_RSSI_sampling*2) {
                     if (radio.available()) {
@@ -162,7 +165,7 @@ void Task_TDMA(void *pvParameters) {
                     iterations++;
                     delayMicroseconds(500);
                 }
-                P_Channel[node_id] = rssi / float(iterations);
+                channel_state_table.P_Channel[node_id] = rssi / float(iterations);
                 
 
                 rssi = 0;
@@ -172,7 +175,7 @@ void Task_TDMA(void *pvParameters) {
                     iterations++;
                     delayMicroseconds(500);
                 };
-                P_Signal[node_id] = rssi / float(iterations);
+                channel_state_table.P_Signal[node_id] = rssi / float(iterations);
 
             }
             node_id = (node_id + 1) % network_params.number_of_nodes;
