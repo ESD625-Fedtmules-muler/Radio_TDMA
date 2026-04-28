@@ -117,10 +117,11 @@ float calculate_bearing(float lat1, float lon1, float lat2, float lon2) {
     float bearing = theta * (180.0 / M_PI);
 
     // Normaliser til 0-360 grader (Kan vi lige selv vælge om vi gider)
-    /* if (bearing < 0) {
+#ifndef BASE
+    if (bearing < 0) {
         bearing += 360.0;
     }
-     */
+#endif
     return bearing;
 }
 
@@ -189,7 +190,8 @@ void update_switch_States(Channel_state_table *table) {
             //? sector skal kun regnes hvis det er en drone og ikke basen!
             int sector = (int)((brng + 22.5f) / 45.0f) % 8; // Chatten siger at vi deler antennerne op i 8 dele
             //? Det her skal også mappes over til rigtige antenne udgange i stedet! Ligenu kører vi 0 er nord og 4 er syd.
-            table->switch_states[i] = (AntennaDir)(DIR_RX_0 + sector);
+            //table->switch_states[i] = (AntennaDir)(DIR_RX_1 + sector);
+            table->switch_states[i] = DIR_RX_OMNI;
 #endif            
             }
 }
@@ -216,7 +218,10 @@ void task_GPS_runner(void *pvparameter) {
         channel_state_table.update_life_times(period/1000);
         update_switch_States(&channel_state_table); // Her får vi lige maskinen til at regne hvilke switches skal sætte for alle timeslots.
         
+        //
         //channel_state_table.printLookUpTable();
+        
+        
         
         i = (i+1) % periods_between_beacons;
         if(i==0){ //Every once in a while blast out some GPS coords...
@@ -225,6 +230,9 @@ void task_GPS_runner(void *pvparameter) {
             router_send_data(network_params.GPS_IP, NODE_ID, buf, len, Near_cast); //Sends to direct nabours only
             router_send_data(network_params.GPS_IP, NODE_ID, buf, len, Near_cast); //Sends to direct nabours only
             router_send_data(network_params.GPS_IP, NODE_ID, buf, len, Near_cast); //Sends to direct nabours only
+            router_send_data(network_params.GPS_IP, NODE_ID, buf, len, Near_cast); //Sends to direct nabours only
+            router_send_data(network_params.GPS_IP, NODE_ID, buf, len, Near_cast); //Sends to direct nabours only
+
 
         }
         vTaskDelayUntil( &xLastWakeTime, pdMS_TO_TICKS(period));
