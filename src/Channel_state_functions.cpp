@@ -11,7 +11,6 @@ const char* antennaDirToStr(AntennaDir dir) {
         case ERROR:       return "ERR ";
         case DIR_TX_OMNI: return "TX_O";
         case DIR_RX_OMNI: return "RX  ";
-        case DIR_RX_0:    return "RX_0";
         case DIR_RX_1:    return "RX_1";
         case DIR_RX_2:    return "RX_2";
         case DIR_RX_3:    return "RX_3";
@@ -19,6 +18,7 @@ const char* antennaDirToStr(AntennaDir dir) {
         case DIR_RX_5:    return "RX_5";
         case DIR_RX_6:    return "RX_6";
         case DIR_RX_7:    return "RX_7";
+        case DIR_RX_8:    return "RX_8";
         default:          return "????";
     }
 }
