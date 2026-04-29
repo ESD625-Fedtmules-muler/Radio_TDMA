@@ -4,15 +4,14 @@
 //* Pins for RF modems SPI
 #ifdef DUMMY_RADIO
 
+
 #define PIN_RF_CSN      18
 #define PIN_RF_MOSI     3
 #define PIN_RF_MISO     0
 #define PIN_RF_SCK      19
 #define PIN_RF_IRQ      1
 #define PIN_RF_CE       10 //Patch such that LR1121 BUSY Pin is connected to R42.
-#define PIN_GPS_PPS     6
-#define PIN_GPS_TX      4
-#define PIN_GPS_RX      5
+#define PIN_GPS_PPS     5
 #define PIN_I2C_SDA     7
 #define PIN_I2C_SCL     8
 

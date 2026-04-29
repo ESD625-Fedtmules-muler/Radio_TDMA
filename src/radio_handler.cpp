@@ -30,6 +30,8 @@ void setup_testcarrier(rf24_pa_dbm_e level, uint8_t channel) {
 
 void stop_testcarrier(rf24_pa_dbm_e power_level) {
     radio.stopConstCarrier();   // Sætter PWR_UP = 0, rydder CONT_WAVE
+    digitalWrite(PIN_I2C_SCL, LOW);
+
     delay(5);                  // Giv chippen tid - ESP32 er hurtig
     radio.powerUp();            // Vækk den igen
     re_init_modem(power_level);
