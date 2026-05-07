@@ -147,7 +147,7 @@ void Task_TDMA(void *pvParameters) {
                 modem_rx();
 #ifndef DUMMY_RADIO
                 //set_switches(channel_state_table.switch_states[node_id]);
-                set_switches(DIR_RX_6);
+                set_switches(DIR_RX_4);
 #endif
                 while (micros() < slot_end - (t_RSSI_sampling*3-1000)) {
                     if (radio.available()) {
