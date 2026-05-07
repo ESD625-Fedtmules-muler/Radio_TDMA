@@ -41,7 +41,7 @@ float speedy_rssi() {
   digitalWrite(PIN_RF_LR1121_CSN, HIGH);
 
 
-  delayMicroseconds(1000);  // fallback hvis ingen BUSY-pin
+  delayMicroseconds(500);  // fallback hvis ingen BUSY-pin
 
   // === Fase 2: Læs response ===
   digitalWrite(PIN_RF_LR1121_CSN, LOW);

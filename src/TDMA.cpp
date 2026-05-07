@@ -134,8 +134,10 @@ void Task_TDMA(void *pvParameters) {
                     }
                 }
                 setup_testcarrier(RF24_PA_MAX, network_params.channel);
+                digitalWrite(PIN_COMPASS_SCL, HIGH);
                 while (micros() < slot_end){ 
                 };
+                digitalWrite(PIN_COMPASS_SCL, LOW);
                 //digitalWrite(PIN_COMPASS_SCL, HIGH);
                 stop_testcarrier(RF24_PA_MAX);
                 modem_rx();
@@ -144,10 +146,10 @@ void Task_TDMA(void *pvParameters) {
             } else {
                 modem_rx();
 #ifndef DUMMY_RADIO
-                set_switches(channel_state_table.switch_states[node_id]);
-                //set_switches(DIR_RX_8);
+                //set_switches(channel_state_table.switch_states[node_id]);
+                set_switches(DIR_RX_6);
 #endif
-                while (micros() < slot_end - t_RSSI_sampling*2) {
+                while (micros() < slot_end - (t_RSSI_sampling*3-1000)) {
                     if (radio.available()) {
                         block_item buf;
                         radio.read(buf.block_payload, 32);
@@ -159,24 +161,28 @@ void Task_TDMA(void *pvParameters) {
                 }
                 
 
-                float rssi = -200.0;
+                float rssi = 0.0;
                 int iterations = 0;
                 
-                while (micros() < (slot_end - t_RSSI_sampling)){
+                while (micros() < (slot_end - (t_RSSI_sampling+2000))){
+                    digitalWrite(PIN_COMPASS_SCL, HIGH);
                     delayMicroseconds(500);
-                    rssi = max(speedy_rssi(), rssi);
+                    rssi += speedy_rssi();
                     iterations++;
                 }
-                channel_state_table.P_Channel[node_id] = rssi;
+                digitalWrite(PIN_COMPASS_SCL, LOW);
+                channel_state_table.P_Channel[node_id] = (rssi)/((float)iterations);
                 delayMicroseconds(1000);
-                rssi = -200.0;
+                rssi = 0.0;
                 iterations = 0;
                 while (micros() < slot_end){ 
+                    digitalWrite(PIN_COMPASS_SCL, HIGH);
                     delayMicroseconds(500);
-                    rssi = max(speedy_rssi(), rssi);
+                    rssi += speedy_rssi();
                     iterations++;
-                };
-                channel_state_table.P_Signal[node_id] = rssi;
+                }
+                digitalWrite(PIN_COMPASS_SCL, LOW);
+                channel_state_table.P_Signal[node_id] = (rssi)/((float)iterations);
 
             }
             node_id = (node_id + 1) % network_params.number_of_nodes;

@@ -35,6 +35,8 @@ void setup() {
     setup_chopper();
     setup_router();
     GPS_setup();
+    pinMode(PIN_COMPASS_SCL, OUTPUT);
+    digitalWrite(PIN_COMPASS_SCL, LOW);
 
     Serial.printf("CPU speed: %dMHz", ESP.getCpuFreqMHz());
     xTaskCreatePinnedToCore(
@@ -99,7 +101,7 @@ void loop() {
             Serial.write((uint8_t)buf[k]);
         }
     }
-    delay(500);
+    delay(250);
 
 }
 

@@ -2,16 +2,18 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 # --- CONFIGURATION ---
-FILE_1 = 'omni_m_jammer_drone_part1.csv' 
-FILE_2 = 'omni_m_jammer_drone_part1.csv'  # <--- Change this to your second filename
+FILE_1 = 'Base_dir_real.csv' 
+FILE_2 = 'Base_dir_real.csv'  # <--- Change this to your second filename
 
-NODE_ID = 1
+
+NODE_ID = 3
 
 # Params for File 1
-SKIP_1, END_1 = 10, 3400
+SKIP_1, END_1 = 10, 1300
+
 
 # Params for File 2
-SKIP_2, END_2 = 10, 3400  # Set to a number if you want a specific end row for file 2
+SKIP_2, END_2 = 10, 1300  # Set to a number if you want a specific end row for file 2
 
 def load_and_filter(path, skip, end, node_id):
     """Helper function to load and clean the data"""
