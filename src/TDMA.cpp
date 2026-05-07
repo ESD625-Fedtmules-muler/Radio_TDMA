@@ -97,7 +97,7 @@ void Task_TDMA(void *pvParameters) {
             uint32_t slot_end = slot_start + t_slot - t_margin;
             while (micros() < slot_start) {}
             
-            while (micros() < slot_end - (2*t_RSSI_sampling + t_RSSI_sampling/10)){}
+            while (micros() < slot_end - (3*t_RSSI_sampling)){}
             digitalWrite(PIN_I2C_SCL, HIGH);
             setup_testcarrier(RF24_PA_MAX, network_params.channel);   
             while (micros() < slot_end - (t_RSSI_sampling + t_RSSI_sampling/10) ){ //Slukker lige for Æ jammer i god tid. 
