@@ -190,8 +190,8 @@ void update_switch_States(Channel_state_table *table) {
             //? sector skal kun regnes hvis det er en drone og ikke basen!
             int sector = (int)((brng + 22.5f) / 45.0f) % 8; // Chatten siger at vi deler antennerne op i 8 dele
             //? Det her skal også mappes over til rigtige antenne udgange i stedet! Ligenu kører vi 0 er nord og 4 er syd.
-            //table->switch_states[i] = (AntennaDir)(DIR_RX_1 + sector);
-            table->switch_states[i] = DIR_RX_OMNI;
+            table->switch_states[i] = (AntennaDir)(DIR_RX_1 + sector);
+            //table->switch_states[i] = DIR_RX_OMNI;
 #endif            
             }
 }

@@ -122,7 +122,7 @@ bool Channel_state_table :: update_life_times(int8_t delta_time){
         if(entries[i].lifetime >= 0){
             entries[i].lifetime += delta_time;
         }
-        if(entries[i].lifetime > network_params.pos_timeout){
+        if((entries[i].lifetime > network_params.pos_timeout) | (entries[i].lifetime < -1)){
             entries[i].lifetime = -1;
         }
     }
